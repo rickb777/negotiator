@@ -1,14 +1,13 @@
 package negotiator
 
 import (
-	"sort"
 	"strconv"
 	"strings"
 )
 
 const (
 	// ParameteredMediaRangeWeight is the default weight of a media range with an
-	// accept-param
+	// Accept-param
 	ParameteredMediaRangeWeight float64 = 1.0 //e.g text/html;level=1
 	// TypeSubtypeMediaRangeWeight is the default weight of a media range with
 	// type and subtype defined
@@ -21,23 +20,27 @@ const (
 	StarStarMediaRangeWeight float64 = 0.7 //e.g */*
 )
 
-// Accept is an http accept
-type accept string
+// Accept is an http accept header value, e.g. as in "Accept-Language: en-GB,en;q=0.5".
+type Accept string
 
-// MediaRanges returns prioritized media ranges
-func (accept accept) ParseMediaRanges() []weightedValue {
-	var retVals []weightedValue
+// Parse returns a (multi-valued) header in priority order. A blank input returns nil.
+func (accept Accept) Parse() WeightedValues {
+	if accept == "" {
+		return nil
+	}
+
+	var values WeightedValues
 	mrs := strings.Split(string(accept), ",")
 
 	for _, mr := range mrs {
 		mrAndAcceptParam := strings.Split(mr, ";")
-		//if no accept-param
+		//if no Accept-param
 		if len(mrAndAcceptParam) == 1 {
-			retVals = append(retVals, handleMediaRangeNoAcceptParams(mrAndAcceptParam[0]))
+			values = append(values, handleMediaRangeNoAcceptParams(mrAndAcceptParam[0]))
 			continue
 		}
 
-		retVals = append(retVals, handleMediaRangeWithAcceptParams(mrAndAcceptParam[0], mrAndAcceptParam[1:]))
+		values = append(values, handleMediaRangeWithAcceptParams(mrAndAcceptParam[0], mrAndAcceptParam[1:]))
 	}
 
 	//If no Accept header field is present, then it is assumed that the client
@@ -45,15 +48,15 @@ func (accept accept) ParseMediaRanges() []weightedValue {
 	//server cannot send a response which is acceptable according to the combined
 	//Accept field value, then the server SHOULD send a 406 (not acceptable)
 	//response.
-	sort.Sort(byWeight(retVals))
 
-	return retVals
+	return values.Sorted()
 }
 
-func handleMediaRangeWithAcceptParams(mediaRange string, acceptParams []string) weightedValue {
-	wv := new(weightedValue)
-	wv.Value = strings.TrimSpace(mediaRange)
-	wv.Weight = ParameteredMediaRangeWeight
+func handleMediaRangeWithAcceptParams(mediaRange string, acceptParams []string) WeightedValue {
+	wv := WeightedValue{
+		Value:  strings.TrimSpace(mediaRange),
+		Weight: ParameteredMediaRangeWeight,
+	}
 
 	for index := 0; index < len(acceptParams); index++ {
 		ap := strings.ToLower(acceptParams[index])
@@ -63,7 +66,7 @@ func handleMediaRangeWithAcceptParams(mediaRange string, acceptParams []string) 
 			wv.Value = strings.Join([]string{wv.Value, acceptParams[index]}, ";")
 		}
 	}
-	return *wv
+	return wv
 }
 
 func isQualityAcceptParam(acceptParam string) bool {
@@ -78,10 +81,11 @@ func parseQuality(acceptParam string) float64 {
 	return weight
 }
 
-func handleMediaRangeNoAcceptParams(mediaRange string) weightedValue {
-	wv := new(weightedValue)
-	wv.Value = strings.TrimSpace(mediaRange)
-	wv.Weight = 0.0
+func handleMediaRangeNoAcceptParams(mediaRange string) WeightedValue {
+	wv := WeightedValue{
+		Value:  strings.TrimSpace(mediaRange),
+		Weight: 1.0,
+	}
 
 	typeSubtype := strings.Split(wv.Value, "/")
 	if len(typeSubtype) == 2 {
@@ -98,7 +102,7 @@ func handleMediaRangeNoAcceptParams(mediaRange string) weightedValue {
 			wv.Weight = TypeSubtypeMediaRangeWeight
 			break
 		}
-	} //else invalid media range the weight remains 0.0
+	} //else the weight remains 1.0
 
-	return *wv
+	return wv
 }

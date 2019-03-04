@@ -24,8 +24,14 @@ const (
 	xmlHttpRequest = "XMLHttpRequest"
 )
 
+// ErrorHandler is called for NotAcceptable situations.
+type ErrorHandler func(w http.ResponseWriter, error string, code int)
+
 // Negotiator is responsible for content negotiation when using custom response processors.
-type Negotiator struct{ processors []ResponseProcessor }
+type Negotiator struct {
+	processors   []ResponseProcessor
+	errorHandler ErrorHandler
+}
 
 // NewWithJSONAndXML allows users to pass custom response processors. By default, processors
 // for XML and JSON are already created.
@@ -36,7 +42,8 @@ func NewWithJSONAndXML(responseProcessors ...ResponseProcessor) *Negotiator {
 //New allows users to pass custom response processors.
 func New(responseProcessors ...ResponseProcessor) *Negotiator {
 	return &Negotiator{
-		responseProcessors,
+		processors:   responseProcessors,
+		errorHandler: http.Error,
 	}
 }
 
@@ -44,26 +51,35 @@ func New(responseProcessors ...ResponseProcessor) *Negotiator {
 // the extra processors.
 func (n *Negotiator) Add(responseProcessors ...ResponseProcessor) *Negotiator {
 	return &Negotiator{
-		append(n.processors, responseProcessors...),
+		processors:   append(n.processors, responseProcessors...),
+		errorHandler: n.errorHandler,
+	}
+}
+
+// With adds a custom error handler. This is used for 406-Not Acceptable cases.
+func (n *Negotiator) With(eh ErrorHandler) *Negotiator {
+	return &Negotiator{
+		processors:   n.processors,
+		errorHandler: eh,
 	}
 }
 
 // Negotiate your model based on the HTTP Accept header.
 func (n *Negotiator) Negotiate(w http.ResponseWriter, req *http.Request, dataModel interface{}, context ...interface{}) error {
-	return negotiateHeader(n.processors, w, req, dataModel, context...)
+	return n.negotiateHeader(w, req, dataModel, context...)
 }
 
 // Negotiate your model based on the HTTP Accept header. Only XML and JSON are handled.
 func Negotiate(w http.ResponseWriter, req *http.Request, dataModel interface{}, context ...interface{}) error {
-	processors := []ResponseProcessor{NewJSON(), NewXML()}
-	return negotiateHeader(processors, w, req, dataModel, context...)
+	n := NewWithJSONAndXML()
+	return n.negotiateHeader(w, req, dataModel, context...)
 }
 
 // Firstly, all Ajax requests are processed by the first available Ajax processor.
 // Otherwise, standard content negotiation kicks in.
 //
 // A request without any Accept header field implies that the user agent
-// will accept any media type in response.
+// will Accept any media type in response.
 //
 // If the header field is present in a request and none of the available
 // representations for the response have a media type that is listed as
@@ -74,9 +90,9 @@ func Negotiate(w http.ResponseWriter, req *http.Request, dataModel interface{}, 
 //
 // See rfc7231-sec5.3.2:
 // http://tools.ietf.org/html/rfc7231#section-5.3.2
-func negotiateHeader(processors []ResponseProcessor, w http.ResponseWriter, req *http.Request, dataModel interface{}, context ...interface{}) error {
+func (n *Negotiator) negotiateHeader(w http.ResponseWriter, req *http.Request, dataModel interface{}, context ...interface{}) error {
 	if IsAjax(req) {
-		for _, processor := range processors {
+		for _, processor := range n.processors {
 			ajax, doesAjax := processor.(AjaxResponseProcessor)
 			if doesAjax && ajax.IsAjaxResponder() {
 				return processor.Process(w, req, dataModel, context...)
@@ -84,31 +100,31 @@ func negotiateHeader(processors []ResponseProcessor, w http.ResponseWriter, req 
 		}
 	}
 
-	accept := accept(req.Header.Get("Accept"))
+	accept := Accept(req.Header.Get("Accept"))
 
-	if len(processors) > 0 {
+	if len(n.processors) > 0 {
 		if accept == "" {
-			return processors[0].Process(w, req, dataModel, context...)
+			return n.processors[0].Process(w, req, dataModel, context...)
 		}
 
-		for _, mr := range accept.ParseMediaRanges() {
-			if len(mr.Value) == 0 {
+		for _, mr := range accept.Parse().Values() {
+			if len(mr) == 0 {
 				continue
 			}
 
-			if strings.EqualFold(mr.Value, "*/*") {
-				return processors[0].Process(w, req, dataModel, context...)
+			if strings.EqualFold(mr, "*/*") {
+				return n.processors[0].Process(w, req, dataModel, context...)
 			}
 
-			for _, processor := range processors {
-				if processor.CanProcess(mr.Value) {
+			for _, processor := range n.processors {
+				if processor.CanProcess(mr) {
 					return processor.Process(w, req, dataModel, context...)
 				}
 			}
 		}
 	}
 
-	http.Error(w, "", http.StatusNotAcceptable)
+	n.errorHandler(w, "", http.StatusNotAcceptable)
 	return nil
 }
 
