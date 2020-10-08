@@ -1,6 +1,6 @@
 # Negotiator 
 
-[![GoDoc](https://godoc.org/github.com/rickb777/negotiator?status.png)](http://pkg.go.dev/github.com/rickb777/negotiator)
+[![GoDoc](https://img.shields.io/badge/api-Godoc-blue.svg)](http://pkg.go.dev/github.com/rickb777/negotiator)
 [![Build Status](https://travis-ci.org/rickb777/negotiator.svg?branch=master)](https://travis-ci.org/rickb777/negotiator/builds)
 [![Issues](https://img.shields.io/github/issues/rickb777/negotiator.svg)](https://github.com/rickb777/negotiator/issues)
 
