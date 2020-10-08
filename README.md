@@ -1,4 +1,9 @@
-# Negotiator [![GoDoc](https://godoc.org/github.com/rickb777/negotiator?status.png)](http://godoc.org/github.com/rickb777/negotiator) [![Build Status](https://travis-ci.org/rickb777/negotiator.svg?branch=master)](https://travis-ci.org/rickb777/negotiator)
+# Negotiator 
+
+[![GoDoc](https://godoc.org/github.com/rickb777/negotiator?status.png)](http://pkg.go.dev/github.com/rickb777/negotiator)
+[![Build Status](https://travis-ci.org/rickb777/negotiator.svg?branch=master)](https://travis-ci.org/rickb777/negotiator/builds)
+[![Issues](https://img.shields.io/github/issues/rickb777/negotiator.svg)](https://github.com/rickb777/negotiator/issues)
+
 This is a libary that handles content negotiation in web applications written in Go.
 
 ## Usage
