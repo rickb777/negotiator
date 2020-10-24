@@ -15,7 +15,7 @@
 package negotiator
 
 import (
-	"github.com/rickb777/negotiator/accept"
+	"github.com/rickb777/negotiator/header"
 	"net/http"
 )
 
@@ -106,7 +106,7 @@ func (n *Negotiator) negotiateHeader(w http.ResponseWriter, req *http.Request, d
 			return n.processors[0].Process(w, req, dataModel, context...)
 		}
 
-		for _, mr := range accept.ParseAcceptHeader(acceptHeader) {
+		for _, mr := range header.ParseAcceptHeader(acceptHeader) {
 			if mr.Type == "" && mr.Subtype == "" {
 				continue
 			}

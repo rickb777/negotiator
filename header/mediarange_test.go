@@ -1,4 +1,4 @@
-package accept
+package header
 
 import (
 	"testing"
@@ -8,7 +8,7 @@ import (
 
 func TestParseAcceptHeader_parses_single(t *testing.T) {
 	g := NewGomegaWithT(t)
-	mr := ParseAcceptHeader("application/json")
+	mr := ParseMediaRanges("application/json")
 
 	g.Expect(len(mr)).To(Equal(1))
 	g.Expect(mr[0].Type).To(Equal("application"))
@@ -18,7 +18,7 @@ func TestParseAcceptHeader_parses_single(t *testing.T) {
 
 func TestParseAcceptHeader_preserves_case_of_mediaRange(t *testing.T) {
 	g := NewGomegaWithT(t)
-	mr := ParseAcceptHeader("application/CEA")
+	mr := ParseMediaRanges("application/CEA")
 
 	g.Expect(len(mr)).To(Equal(1))
 	g.Expect(mr[0].Type).To(Equal("application"))
@@ -27,7 +27,7 @@ func TestParseAcceptHeader_preserves_case_of_mediaRange(t *testing.T) {
 
 func TestParseAcceptHeader_defaults_quality_if_not_explicit(t *testing.T) {
 	g := NewGomegaWithT(t)
-	mr := ParseAcceptHeader("text/plain")
+	mr := ParseMediaRanges("text/plain")
 
 	g.Expect(len(mr)).To(Equal(1))
 	g.Expect(mr[0].Quality).To(Equal(DefaultQuality))
@@ -35,17 +35,17 @@ func TestParseAcceptHeader_defaults_quality_if_not_explicit(t *testing.T) {
 
 func TestParseAcceptHeader_should_parse_quality(t *testing.T) {
 	g := NewGomegaWithT(t)
-	mr := ParseAcceptHeader("application/json;q=0.9")
+	mr := ParseMediaRanges("application/json;q=0.9")
 
 	g.Expect(len(mr)).To(Equal(1))
 	g.Expect(mr[0].Type).To(Equal("application"))
 	g.Expect(mr[0].Subtype).To(Equal("json"))
-	g.Expect(mr[0].Quality).To(Equal(0.9))
+	g.Expect(mr[0].Quality).To(BeNumerically("~", 0.9, 1e-4))
 }
 
 func TestParseAcceptHeader_sorts_by_decending_quality(t *testing.T) {
 	g := NewGomegaWithT(t)
-	mr := ParseAcceptHeader("application/json;q=0.8, application/xml, application/*;q=0.1")
+	mr := ParseMediaRanges("application/json;q=0.8, application/xml, application/*;q=0.1")
 
 	g.Expect(len(mr)).To(Equal(3))
 
@@ -55,16 +55,16 @@ func TestParseAcceptHeader_sorts_by_decending_quality(t *testing.T) {
 
 	g.Expect(mr[1].Type).To(Equal("application"))
 	g.Expect(mr[1].Subtype).To(Equal("json"))
-	g.Expect(mr[1].Quality).To(Equal(0.8))
+	g.Expect(mr[1].Quality).To(BeNumerically("~", 0.8, 1e-4))
 
 	g.Expect(mr[2].Type).To(Equal("application"))
 	g.Expect(mr[2].Subtype).To(Equal("*"))
-	g.Expect(mr[2].Quality).To(Equal(0.1))
+	g.Expect(mr[2].Quality).To(BeNumerically("~", 0.1, 1e-4))
 }
 
 func TestMediaRanges_should_ignore_invalid_quality(t *testing.T) {
 	g := NewGomegaWithT(t)
-	mr := ParseAcceptHeader("text/html;q=blah")
+	mr := ParseMediaRanges("text/html;q=blah")
 
 	g.Expect(len(mr)).To(Equal(1))
 	g.Expect(mr[0].Type).To(Equal("text"))
@@ -73,24 +73,13 @@ func TestMediaRanges_should_ignore_invalid_quality(t *testing.T) {
 	g.Expect(mr[0].Params).To(HaveLen(0))
 }
 
-func TestMediaRanges_should_not_remove_accept_extension(t *testing.T) {
-	g := NewGomegaWithT(t)
-	mr := ParseAcceptHeader("text/html;q=0.5;a=1;b=2")
-
-	g.Expect(len(mr)).To(Equal(1))
-	g.Expect(mr[0].Type).To(Equal("text"))
-	g.Expect(mr[0].Subtype).To(Equal("html"))
-	g.Expect(mr[0].Quality).To(Equal(0.5))
-	g.Expect(mr[0].Params).To(ConsistOf(KV{"a", "1"}, KV{"b", "2"}))
-}
-
 // If more than one media range applies to a
 // given type, the most specific reference has precedence
 func TestMediaRanges_should_handle_precedence(t *testing.T) {
 	g := NewGomegaWithT(t)
 	// from https://tools.ietf.org/html/rfc7231#section-5.3.2
 	c := "text/*, text/plain, text/plain;format=flowed, */*"
-	mr := ParseAcceptHeader(c)
+	mr := ParseMediaRanges(c)
 
 	g.Expect(len(mr)).To(Equal(4))
 	g.Expect(mr[0]).To(Equal(MediaRange{
@@ -116,6 +105,18 @@ func TestMediaRanges_should_handle_precedence(t *testing.T) {
 	}), c)
 }
 
+func TestMediaRanges_should_not_remove_accept_extension(t *testing.T) {
+	g := NewGomegaWithT(t)
+	mr := ParseMediaRanges("text/html;q=0.5;a=1;b=2")
+
+	g.Expect(len(mr)).To(Equal(1))
+	g.Expect(mr[0].Type).To(Equal("text"))
+	g.Expect(mr[0].Subtype).To(Equal("html"))
+	g.Expect(mr[0].Quality).To(Equal(0.5))
+	g.Expect(mr[0].Params).To(BeEmpty())
+	g.Expect(mr[0].Extensions).To(ConsistOf(KV{"a", "1"}, KV{"b", "2"}))
+}
+
 func TestMediaRanges_should_handle_quality_precedence(t *testing.T) {
 	g := NewGomegaWithT(t)
 	cases := []string{
@@ -126,7 +127,7 @@ func TestMediaRanges_should_handle_quality_precedence(t *testing.T) {
 		"text/html;level=2;q=0.4, */*;q=0.5, text/*;q=0.3, text/html;q=0.7, text/html;level=1",
 	}
 	for _, c := range cases {
-		mr := ParseAcceptHeader(c)
+		mr := ParseMediaRanges(c)
 		g.Expect(5, len(mr))
 
 		g.Expect(mr[0]).To(Equal(MediaRange{
@@ -175,7 +176,7 @@ func TestMediaRanges_should_handle_quality_precedence(t *testing.T) {
 //		//"text/plain;format=fixed;q=0.4, */*;q=0.5, text/*;q=0.3, text/plain;q=0.7, text/plain;format=flowed",
 //	}
 //	for _, c := range cases {
-//		mr := ParseAcceptHeader(c)
+//		mr := ParseMediaRanges(c)
 //		g.Expect(5, len(mr))
 //
 //		g.Expect("text/plain;format=flowed", mr[0].Value, c)
@@ -202,7 +203,7 @@ func TestMediaRanges_should_handle_quality_precedence(t *testing.T) {
 //	g := NewGomegaWithT(t)
 //	// from http://tools.ietf.org/html/rfc7231#section-5.3.1
 //	// and http://tools.ietf.org/html/rfc7231#section-5.3.2
-//	mr := ParseAcceptHeader("text/* ; q=0.3, text/html ; Q=0.7, text/html;level=2; q=0.4, */*; q=0.5")
+//	mr := ParseMediaRanges("text/* ; q=0.3, text/html ; Q=0.7, text/html;level=2; q=0.4, */*; q=0.5")
 //
 //	g.Expect(4, len(mr))
 //
