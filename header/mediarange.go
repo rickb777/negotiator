@@ -14,6 +14,9 @@ type MediaRange struct {
 	Extensions    []KV
 }
 
+// MediaRanges holds a slice of media ranges.
+type MediaRanges []MediaRange
+
 // mrByPrecedence implements sort.Interface for []MediaRange based
 // on the precedence rules. The data will be returned sorted decending
 type mrByPrecedence []MediaRange
@@ -25,6 +28,7 @@ func (a mrByPrecedence) Less(i, j int) bool {
 	return a[i].StrongerThan(a[j])
 }
 
+// StrongerThan compares a media range with another value, using the precedence rules.
 func (mr MediaRange) StrongerThan(other MediaRange) bool {
 	// qualities are floats so we don't use == directly
 	if mr.Quality > other.Quality {
@@ -50,6 +54,7 @@ func (mr MediaRange) StrongerThan(other MediaRange) bool {
 	return false
 }
 
+// Value gets the conjoined type and subtype string.
 func (mr MediaRange) Value() string {
 	return fmt.Sprintf("%s/%s", mr.Type, mr.Subtype)
 }
@@ -65,6 +70,17 @@ func (mr MediaRange) String() string {
 	}
 	for _, p := range mr.Extensions {
 		fmt.Fprintf(buf, ";%s=%s", p.Key, p.Value)
+	}
+	return buf.String()
+}
+
+func (mrs MediaRanges) String() string {
+	buf := &strings.Builder{}
+	comma := ""
+	for _, pv := range mrs {
+		buf.WriteString(comma)
+		buf.WriteString(pv.String())
+		comma = ", "
 	}
 	return buf.String()
 }

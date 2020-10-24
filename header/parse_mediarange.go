@@ -26,19 +26,19 @@ const (
 // origin server can either honor the header field by sending a 406 (Not
 // Acceptable) response or disregard the header field by treating the
 // response as if it is not subject to content negotiation.
-func ParseMediaRanges(acceptHeader string) []MediaRange {
+func ParseMediaRanges(acceptHeader string) MediaRanges {
 	result := parseMediaRangeHeader(acceptHeader)
 	sort.Stable(mrByPrecedence(result))
 	return result
 }
 
-func parseMediaRangeHeader(acceptHeader string) []MediaRange {
+func parseMediaRangeHeader(acceptHeader string) MediaRanges {
 	if acceptHeader == "" {
 		return nil
 	}
 
 	parts := strings.Split(string(acceptHeader), ",")
-	wvs := make([]MediaRange, 0, len(parts))
+	wvs := make(MediaRanges, 0, len(parts))
 
 	for _, part := range parts {
 		valueAndParams := strings.Split(part, ";")

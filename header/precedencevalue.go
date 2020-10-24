@@ -16,6 +16,7 @@ type PrecedenceValue struct {
 	Quality float64
 }
 
+// PrecedenceValues holds a slice of precedence values.
 type PrecedenceValues []PrecedenceValue
 
 // wvByPrecedence implements sort.Interface for []PrecedenceValue based

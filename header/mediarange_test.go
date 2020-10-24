@@ -117,6 +117,14 @@ func TestMediaRanges_should_not_remove_accept_extension(t *testing.T) {
 	g.Expect(mr[0].Extensions).To(ConsistOf(KV{"a", "1"}, KV{"b", "2"}))
 }
 
+func TestMediaRanges_string(t *testing.T) {
+	g := NewGomegaWithT(t)
+	header := "text/html;level=1;q=0.9;a=1;b=2, text/html;q=0.5, text/*;q=0.3"
+	mr := ParseMediaRanges(header)
+	g.Expect(mr[0].Value()).To(Equal("text/html"))
+	g.Expect(mr.String()).To(Equal(header))
+}
+
 func TestMediaRanges_should_handle_quality_precedence(t *testing.T) {
 	g := NewGomegaWithT(t)
 	cases := []string{
