@@ -15,8 +15,8 @@
 package negotiator
 
 import (
+	"github.com/rickb777/negotiator/accept"
 	"net/http"
-	"strings"
 )
 
 const (
@@ -84,24 +84,23 @@ func negotiateHeader(processors []ResponseProcessor, w http.ResponseWriter, req 
 		}
 	}
 
-	accept := accept(req.Header.Get("Accept"))
-
 	if len(processors) > 0 {
-		if accept == "" {
+		acceptHeader := req.Header.Get("Accept")
+		if acceptHeader == "" {
 			return processors[0].Process(w, req, dataModel, context...)
 		}
 
-		for _, mr := range accept.ParseMediaRanges() {
-			if len(mr.Value) == 0 {
+		for _, mr := range accept.ParseAcceptHeader(acceptHeader) {
+			if mr.Type == "" && mr.Subtype == "" {
 				continue
 			}
 
-			if strings.EqualFold(mr.Value, "*/*") {
+			if mr.Type == "*" && mr.Subtype == "*" {
 				return processors[0].Process(w, req, dataModel, context...)
 			}
 
 			for _, processor := range processors {
-				if processor.CanProcess(mr.Value) {
+				if processor.CanProcess(mr.Value()) {
 					return processor.Process(w, req, dataModel, context...)
 				}
 			}
