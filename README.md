@@ -4,16 +4,17 @@
 [![Build Status](https://travis-ci.org/rickb777/negotiator.svg?branch=master)](https://travis-ci.org/rickb777/negotiator/builds)
 [![Issues](https://img.shields.io/github/issues/rickb777/negotiator.svg)](https://github.com/rickb777/negotiator/issues)
 
-This is a libary that handles content negotiation in web applications written in Go.
+This is a library that handles content negotiation in HTTP server applications written in Go.
 
 ## Usage
 
 ### Simple
+
 To return JSON/XML out of the box simple put this in your route handler:
 ```
 func getUser(w http.ResponseWriter, req *http.Request) {
     user := &User{"Joe","Bloggs"}
-    if err := negotiator.Negotiate(w, req, user); err != nil {
+    if err := negotiator.Negotiate(w, req, negotiator.Offer{Data: user}); err != nil {
       http.Error(w, err.Error(), http.StatusInternalServerError)
     }
 }
@@ -33,14 +34,23 @@ You will create a `Negotiator` with one or more response processors. If a reques
 
 ## Accept Handling
 
-The `Accept` type can be used for other 'Accept' headers too (e.g. `Accept-Language`)'. Simply type-convert a header string to `Accept` and call its `Parse()` method, e.g.
+The `Accept` header is parsed using `header.ParseMediaRanges()`, which returns the slice of media ranges, e.g.
 
 ```
     // handle Accept-Language
-    accept := negotiator.Accept("en-GB,en;q=0.5")
-    languages := accept.Parse().Values()
-    // this will contain {"en-GB", "en"}
+    mediaRanges := header.ParseMediaRanges("application/json;q=0.8, application/xml, application/*;q=0.1")
 ```
+
+The resulting slice is sorted according to precedence and quality rules, so in this example the order is {"application/xml", "application/json", "application/*"} because the middle item has an implied quality of 1, whereas the first item has a lower quality.
+
+The other content-negotiation headers, `Accept-Language`, `Accept-Charset`, `Accept-Encoding`, are handled by the `header.Parse` method, e.g.
+
+```
+    // handle Accept-Language
+    acceptLanguages := header.Parse("en-GB,en;q=0.5")
+```
+
+This will contain {"en-GB", "en"} in a `header.PrecedenceValues` slice, sorted according to precedence rules.
 
 This can be used for `Accept-Language`, `Accept-Charset` and `Accept-Encoding`, as well as `Accept`. The negotiator in this API uses the `Accept` header only, though.
 

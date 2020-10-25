@@ -31,6 +31,16 @@ type Offer struct {
 	Data      interface{}
 }
 
+type Offers []Offer
+
+func (offers Offers) MediaTypes() []string {
+	ss := make([]string, len(offers))
+	for i, o := range offers {
+		ss[i] = o.MediaType
+	}
+	return ss
+}
+
 func dereferenceDataProviders(data interface{}, lang string) interface{} {
 	for {
 		switch fn := data.(type) {
