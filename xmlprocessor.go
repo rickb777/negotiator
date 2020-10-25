@@ -36,11 +36,11 @@ func (p *xmlProcessor) SetContentType(contentType string) ResponseProcessor {
 	return p
 }
 
-func (*xmlProcessor) CanProcess(mediaRange string) bool {
+func (*xmlProcessor) CanProcess(mediaRange string, lang string) bool {
 	return strings.Contains(mediaRange, "/xml") || strings.HasSuffix(mediaRange, "+xml")
 }
 
-func (p *xmlProcessor) Process(w http.ResponseWriter, req *http.Request, dataModel interface{}, context ...interface{}) error {
+func (p *xmlProcessor) Process(w http.ResponseWriter, req *http.Request, dataModel interface{}, _ string) error {
 	if dataModel == nil {
 		w.WriteHeader(http.StatusNoContent)
 		return nil

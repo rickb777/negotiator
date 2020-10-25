@@ -4,8 +4,8 @@ import "net/http"
 
 // ResponseProcessor interface creates the contract for custom content negotiation.
 type ResponseProcessor interface {
-	CanProcess(mediaRange string) bool
-	Process(w http.ResponseWriter, req *http.Request, dataModel interface{}, context ...interface{}) error
+	CanProcess(mediaRange string, lang string) bool
+	Process(w http.ResponseWriter, req *http.Request, dataModel interface{}, template string) error
 }
 
 // ContentTypeSettable interface provides for those response processors that allow the

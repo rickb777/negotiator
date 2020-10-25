@@ -31,11 +31,11 @@ func (p *txtProcessor) SetContentType(contentType string) ResponseProcessor {
 	return p
 }
 
-func (*txtProcessor) CanProcess(mediaRange string) bool {
+func (*txtProcessor) CanProcess(mediaRange string, lang string) bool {
 	return strings.EqualFold(mediaRange, "text/plain") || strings.EqualFold(mediaRange, "text/*")
 }
 
-func (p *txtProcessor) Process(w http.ResponseWriter, req *http.Request, dataModel interface{}, context ...interface{}) error {
+func (p *txtProcessor) Process(w http.ResponseWriter, req *http.Request, dataModel interface{}, _ string) error {
 	if dataModel == nil {
 		w.WriteHeader(http.StatusNoContent)
 		return nil

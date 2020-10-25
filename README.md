@@ -43,3 +43,8 @@ The `Accept` type can be used for other 'Accept' headers too (e.g. `Accept-Langu
 ```
 
 This can be used for `Accept-Language`, `Accept-Charset` and `Accept-Encoding`, as well as `Accept`. The negotiator in this API uses the `Accept` header only, though.
+
+## Acknowledgement
+
+Many thanks to Jonathan Channon (https://github.com/jchannon) for the original concepts and work on which this was based.
+  

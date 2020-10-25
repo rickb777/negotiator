@@ -36,6 +36,13 @@ func (a wvByPrecedence) Less(i, j int) bool {
 	return false
 }
 
+func (pvs PrecedenceValues) WithDefault() PrecedenceValues {
+	if len(pvs) == 0 {
+		return []PrecedenceValue{{Value: "*", Quality: DefaultQuality}}
+	}
+	return pvs
+}
+
 func (pvs PrecedenceValues) String() string {
 	buf := &strings.Builder{}
 	comma := ""

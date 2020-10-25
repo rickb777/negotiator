@@ -16,13 +16,13 @@ func TestParseAcceptHeader_parses_single(t *testing.T) {
 	g.Expect(mr[0].Quality).To(Equal(DefaultQuality))
 }
 
-func TestParseAcceptHeader_preserves_case_of_mediaRange(t *testing.T) {
+func TestParseAcceptHeader_converts_mediaRange_to_lowercase(t *testing.T) {
 	g := NewGomegaWithT(t)
-	mr := ParseMediaRanges("application/CEA")
+	mr := ParseMediaRanges("Application/CEA")
 
 	g.Expect(len(mr)).To(Equal(1))
 	g.Expect(mr[0].Type).To(Equal("application"))
-	g.Expect(mr[0].Subtype).To(Equal("CEA"))
+	g.Expect(mr[0].Subtype).To(Equal("cea"))
 }
 
 func TestParseAcceptHeader_defaults_quality_if_not_explicit(t *testing.T) {

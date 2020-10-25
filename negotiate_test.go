@@ -4,52 +4,54 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
-	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	. "github.com/onsi/gomega"
 )
 
-func TestShouldAddCustomResponseProcessors(t *testing.T) {
-
+func Test_should_add_custom_response_processors(t *testing.T) {
+	g := NewGomegaWithT(t)
 	var fakeResponseProcessor = &fakeProcessor{}
 	negotiator := NewWithJSONAndXML(fakeResponseProcessor)
 
-	assert.Equal(t, 3, len(negotiator.processors))
+	g.Expect(len(negotiator.processors)).To(Equal(3))
 }
 
-func TestShouldAddCustomResponseProcessors2(t *testing.T) {
-
+func Test_should_add_custom_response_processors2(t *testing.T) {
+	g := NewGomegaWithT(t)
 	var fakeResponseProcessor = &fakeProcessor{}
 	negotiator := New().Add(NewJSON(), NewXML()).Add(fakeResponseProcessor)
 
-	assert.Equal(t, 3, len(negotiator.processors))
+	g.Expect(len(negotiator.processors)).To(Equal(3))
 }
 
-func TestShouldAddCustomResponseProcessorsToBeginning(t *testing.T) {
-
+func Test_should_add_custom_response_processors_to_beginning(t *testing.T) {
+	g := NewGomegaWithT(t)
 	var fakeResponseProcessor = &fakeProcessor{}
 	negotiator := NewWithJSONAndXML(fakeResponseProcessor)
 
 	firstProcessor := negotiator.processors[0]
 	processorName := reflect.TypeOf(firstProcessor).String()
 
-	assert.Equal(t, "*negotiator.fakeProcessor", processorName)
+	g.Expect(processorName).To(Equal("*negotiator.fakeProcessor"))
 }
 
-func TestShouldReturnDefaultProcessorIfNoAcceptHeader(t *testing.T) {
+func Test_should_use_default_processor_if_no_accept_header(t *testing.T) {
+	g := NewGomegaWithT(t)
 	var fakeResponseProcessor = &fakeProcessor{}
 	negotiator := New(fakeResponseProcessor)
 
 	req, _ := http.NewRequest("GET", "/", nil)
 	recorder := httptest.NewRecorder()
 
-	negotiator.Negotiate(recorder, req, "foo")
+	negotiator.Negotiate(recorder, req, Offer{Data: "foo"})
 
-	assert.Equal(t, "boo ya!", recorder.Body.String())
+	g.Expect(recorder.Code).To(Equal(http.StatusOK))
+	g.Expect(recorder.Body.String()).To(Equal("foo"))
 }
 
-func TestShouldGiveJSONResponseForAjaxRequests(t *testing.T) {
+func Test_should_give_JSON_response_for_ajax_requests(t *testing.T) {
+	g := NewGomegaWithT(t)
 	negotiator := NewWithJSONAndXML()
 
 	req, _ := http.NewRequest("GET", "/", nil)
@@ -59,12 +61,14 @@ func TestShouldGiveJSONResponseForAjaxRequests(t *testing.T) {
 	model := &ValidXMLUser{
 		"Joe Bloggs",
 	}
-	negotiator.Negotiate(recorder, req, model)
+	negotiator.Negotiate(recorder, req, Offer{Data: model})
 
-	assert.Equal(t, "{\"Name\":\"Joe Bloggs\"}\n", recorder.Body.String())
+	g.Expect(recorder.Code).To(Equal(http.StatusOK))
+	g.Expect(recorder.Body.String()).To(Equal("{\"Name\":\"Joe Bloggs\"}\n"))
 }
 
-func TestShouldReturn406IfNoMatchingAcceptHeader(t *testing.T) {
+func Test_should_return_406_if_no_matching_accept_header(t *testing.T) {
+	g := NewGomegaWithT(t)
 	var fakeResponseProcessor = &fakeProcessor{}
 	negotiator := New(fakeResponseProcessor)
 
@@ -72,53 +76,95 @@ func TestShouldReturn406IfNoMatchingAcceptHeader(t *testing.T) {
 	req.Header.Add("Accept", "image/png")
 	recorder := httptest.NewRecorder()
 
-	negotiator.Negotiate(recorder, req, "foo")
+	negotiator.Negotiate(recorder, req, Offer{Data: "foo"})
 
-	assert.Equal(t, http.StatusNotAcceptable, recorder.Code)
+	g.Expect(recorder.Code).To(Equal(http.StatusNotAcceptable))
 }
 
-func TestShouldReturn406IfNoAcceptHeaderWithoutCustomResponseProcessor(t *testing.T) {
+func Test_should_return_406_if_no_accept_header_without_custom_response_processor(t *testing.T) {
+	g := NewGomegaWithT(t)
 	req, _ := http.NewRequest("GET", "/", nil)
 	recorder := httptest.NewRecorder()
 
-	Negotiate(recorder, req, "foo")
+	NegotiateWithJSONAndXML(recorder, req, Offer{Data: "foo", MediaType: "text/plain"})
 
-	assert.Equal(t, http.StatusOK, recorder.Code)
+	g.Expect(recorder.Code).To(Equal(http.StatusNotAcceptable))
 }
 
-func TestShouldNegotiateAndWriteToResponseBody(t *testing.T) {
+func Test_should_not_accept_when_explicitly_excluded1(t *testing.T) {
+	g := NewGomegaWithT(t)
+	var fakeResponseProcessor = &fakeProcessor{}
+	negotiator := New(fakeResponseProcessor)
+
+	req, _ := http.NewRequest("GET", "/", nil)
+	// this header means "anything but application/negotiatortesting"
+	req.Header.Add("Accept", "application/negotiatortesting;q=0, */*") // excluded
+	req.Header.Add("Accept-Language", "en")                            // accepted
+	recorder := httptest.NewRecorder()
+
+	negotiator.Negotiate(recorder, req, Offer{Data: "foo", MediaType: "application/negotiatortesting", Language: "en"})
+
+	g.Expect(recorder.Code).To(Equal(http.StatusNotAcceptable))
+}
+
+func Test_should_not_accept_when_explicitly_excluded2(t *testing.T) {
+	g := NewGomegaWithT(t)
+	var fakeResponseProcessor = &fakeProcessor{}
+	negotiator := New(fakeResponseProcessor)
+
+	req, _ := http.NewRequest("GET", "/", nil)
+	req.Header.Add("Accept", "application/negotiatortesting, */*") // accepted
+	// this header means "anything but en"
+	req.Header.Add("Accept-Language", "en;q=0, *") // excluded
+	recorder := httptest.NewRecorder()
+
+	negotiator.Negotiate(recorder, req, Offer{Data: "foo", MediaType: "application/negotiatortesting", Language: "en"})
+
+	g.Expect(recorder.Code).To(Equal(http.StatusNotAcceptable))
+}
+
+func Test_should_negotiate_and_write_to_response_body(t *testing.T) {
+	g := NewGomegaWithT(t)
 	var fakeResponseProcessor = &fakeProcessor{}
 	negotiator := New(fakeResponseProcessor)
 
 	req, _ := http.NewRequest("GET", "/", nil)
 	req.Header.Add("Accept", "application/negotiatortesting")
+	req.Header.Add("Accept-Language", "en") // accepted
 	recorder := httptest.NewRecorder()
 
-	negotiator.Negotiate(recorder, req, "foo")
+	negotiator.Negotiate(recorder, req, Offer{Data: "foo", MediaType: "application/negotiatortesting"})
 
-	assert.Equal(t, "boo ya!", recorder.Body.String())
+	g.Expect(recorder.Code).To(Equal(http.StatusOK))
+	g.Expect(recorder.Body.String()).To(Equal("foo"))
 }
 
-func TestShouldNegotiateADefaultProcessor(t *testing.T) {
+func Test_should_negotiate_a_default_processor(t *testing.T) {
+	g := NewGomegaWithT(t)
 	var fakeResponseProcessor = &fakeProcessor{}
 	negotiator := New(fakeResponseProcessor)
 
 	req, _ := http.NewRequest("GET", "/", nil)
 	req.Header.Add("Accept", "*/*")
+
 	recorder := httptest.NewRecorder()
+	negotiator.Negotiate(recorder, req, Offer{Data: "foo"})
+	g.Expect(recorder.Code).To(Equal(http.StatusOK))
+	g.Expect(recorder.Body.String()).To(Equal("foo"))
 
-	negotiator.Negotiate(recorder, req, "foo")
-
-	assert.Equal(t, "boo ya!", recorder.Body.String())
+	recorder = httptest.NewRecorder()
+	negotiator.Negotiate(recorder, req, Offer{Data: "bar", MediaType: "application/negotiatortesting"})
+	g.Expect(recorder.Code).To(Equal(http.StatusOK))
+	g.Expect(recorder.Body.String()).To(Equal("bar"))
 }
 
 type fakeProcessor struct{}
 
-func (*fakeProcessor) CanProcess(mediaRange string) bool {
-	return strings.EqualFold(mediaRange, "application/negotiatortesting")
+func (*fakeProcessor) CanProcess(mediaRange string, lang string) bool {
+	return mediaRange == "application/negotiatortesting" && (lang == "" || lang == "en")
 }
 
-func (*fakeProcessor) Process(w http.ResponseWriter, req *http.Request, model interface{}, context ...interface{}) error {
-	w.Write([]byte("boo ya!"))
+func (*fakeProcessor) Process(w http.ResponseWriter, req *http.Request, model interface{}, _ string) error {
+	w.Write([]byte(model.(string)))
 	return nil
 }

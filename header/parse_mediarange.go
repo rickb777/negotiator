@@ -37,7 +37,7 @@ func parseMediaRangeHeader(acceptHeader string) MediaRanges {
 		return nil
 	}
 
-	parts := strings.Split(string(acceptHeader), ",")
+	parts := strings.Split(strings.ToLower(acceptHeader), ",")
 	wvs := make(MediaRanges, 0, len(parts))
 
 	for _, part := range parts {

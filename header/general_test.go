@@ -67,7 +67,7 @@ func TestParseAcceptXyzHeader_special_cases(t *testing.T) {
 		expected PrecedenceValues
 	}{
 		// ignore invalid quality
-		{actual: "utf-8;q=z", expected: []PrecedenceValue{{Value: "utf-8", Quality: DefaultQuality}}},
+		{actual: "UTF-8;q=z", expected: []PrecedenceValue{{Value: "utf-8", Quality: DefaultQuality}}},
 		{actual: "gzip;q=z", expected: []PrecedenceValue{{Value: "gzip", Quality: DefaultQuality}}},
 		{actual: "en-gb;q=z", expected: []PrecedenceValue{{Value: "en-gb", Quality: DefaultQuality}}},
 
@@ -81,13 +81,13 @@ func TestParseAcceptXyzHeader_special_cases(t *testing.T) {
 			expected: []PrecedenceValue{{Value: "gzip", Quality: DefaultQuality}, {Value: "identity", Quality: 0.5}},
 		},
 		{
-			actual:   " da, en-gb;q=0.8, en; q=0.7",
+			actual:   " DA, en-gb;q=0.8, en; q=0.7",
 			expected: []PrecedenceValue{{Value: "da", Quality: DefaultQuality}, {Value: "en-gb", Quality: 0.8}, {Value: "en", Quality: 0.7}},
 		},
 
 		// with quality - sorted
 		{
-			actual:   "unicode-1-1;q=0.8, iso-8859-5\n",
+			actual:   "unicode-1-1;q=0.8, ISO-8859-5\n",
 			expected: []PrecedenceValue{{Value: "iso-8859-5", Quality: DefaultQuality}, {Value: "unicode-1-1", Quality: 0.8}},
 		},
 		{

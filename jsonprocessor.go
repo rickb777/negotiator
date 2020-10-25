@@ -40,13 +40,13 @@ func (*jsonProcessor) IsAjaxResponder() bool {
 	return true
 }
 
-func (*jsonProcessor) CanProcess(mediaRange string) bool {
+func (*jsonProcessor) CanProcess(mediaRange string, lang string) bool {
 	return strings.EqualFold(mediaRange, "application/json") ||
 		strings.HasPrefix(mediaRange, "application/json-") ||
 		strings.HasSuffix(mediaRange, "+json")
 }
 
-func (p *jsonProcessor) Process(w http.ResponseWriter, req *http.Request, dataModel interface{}, context ...interface{}) error {
+func (p *jsonProcessor) Process(w http.ResponseWriter, req *http.Request, dataModel interface{}, _ string) error {
 	if dataModel == nil {
 		w.WriteHeader(http.StatusNoContent)
 		return nil

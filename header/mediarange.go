@@ -74,6 +74,13 @@ func (mr MediaRange) String() string {
 	return buf.String()
 }
 
+func (mrs MediaRanges) WithDefault() MediaRanges {
+	if len(mrs) == 0 {
+		return []MediaRange{{Type: "*", Subtype: "*", Quality: DefaultQuality}}
+	}
+	return mrs
+}
+
 func (mrs MediaRanges) String() string {
 	buf := &strings.Builder{}
 	comma := ""

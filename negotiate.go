@@ -1,22 +1,9 @@
-// Package negotiator is a library that handles content negotiation in web applications written in Go.
-// Content negotiation is specified by RFC (http://tools.ietf.org/html/rfc7231) and, less formally, by
-// Ajax (https://en.wikipedia.org/wiki/XMLHttpRequest).
-//
-// A Negotiator contains a list of ResponseProcessor. For each call to Negotiate, the best matching
-// response processor is chosen and given the task of sending the response.
-//
-// For more information visit http://github.com/jchannon/negotiator
-//
-//	func getUser(w http.ResponseWriter, req *http.Request) {
-//	    user := &User{"Joe", "Bloggs"}
-//	    negotiator.Negotiate(w, req, user)
-//	}
-//
 package negotiator
 
 import (
 	"github.com/rickb777/negotiator/header"
 	"net/http"
+	"strings"
 )
 
 const (
@@ -64,15 +51,70 @@ func (n *Negotiator) With(eh ErrorHandler) *Negotiator {
 	}
 }
 
-// Negotiate your model based on the HTTP Accept header.
-func (n *Negotiator) Negotiate(w http.ResponseWriter, req *http.Request, dataModel interface{}, context ...interface{}) error {
-	return n.negotiateHeader(w, req, dataModel, context...)
+// NegotiateWithJSONAndXML handles your model based on the HTTP Accept-Xyz headers. Only XML and JSON are handled.
+func NegotiateWithJSONAndXML(w http.ResponseWriter, req *http.Request, offers ...Offer) error {
+	return NewWithJSONAndXML().Negotiate(w, req, offers...)
 }
 
-// Negotiate your model based on the HTTP Accept header. Only XML and JSON are handled.
-func Negotiate(w http.ResponseWriter, req *http.Request, dataModel interface{}, context ...interface{}) error {
-	n := NewWithJSONAndXML()
-	return n.negotiateHeader(w, req, dataModel, context...)
+// Negotiate your model based on the HTTP Accept and Accept-... headers.
+func (n *Negotiator) Negotiate(w http.ResponseWriter, req *http.Request, offers ...Offer) error {
+	if IsAjax(req) {
+		return n.ajaxNegotiate(w, req, offers...)
+	}
+
+	if len(n.processors) == 0 {
+		return n.notAcceptable(w)
+	}
+
+	mrs := header.ParseMediaRanges(req.Header.Get(Accept)).WithDefault()
+	languages := header.Parse(req.Header.Get(AcceptLanguage)).WithDefault()
+	//charsets := header.Parse(req.Header.Get(AcceptCharset)).WithDefault()
+	//encodings := header.Parse(req.Header.Get(AcceptEncoding)).WithDefault()
+
+	for _, accepted := range mrs {
+		for _, lang := range languages {
+			for _, offer := range offers {
+				t, s := split(offer.MediaType, '/')
+				if equalOrWildcard(accepted.Type, t) &&
+					equalOrWildcard(accepted.Subtype, s) &&
+					equalOrWildcard(lang.Value, offer.Language) {
+
+					if accepted.Quality > 0 && lang.Quality > 0 {
+						for _, processor := range n.processors {
+							data := dereferenceDataProviders(offer.Data, offer.Language)
+							if accepted.Type == "*" && accepted.Subtype == "*" {
+								return processor.Process(w, req, data, offer.Template)
+							} else if processor.CanProcess(offer.MediaType, offer.Language) {
+								return processor.Process(w, req, data, offer.Template)
+							}
+						}
+					} else {
+						// content matched but is explicitly excluded, so stop checking other matches
+						return n.notAcceptable(w)
+					}
+				}
+			}
+		}
+	}
+
+	return n.notAcceptable(w)
+}
+
+func (n *Negotiator) ajaxNegotiate(w http.ResponseWriter, req *http.Request, offers ...Offer) error {
+	for _, offer := range offers {
+		if offer.MediaType == "application/json" {
+			data := dereferenceDataProviders(offer.Data, "")
+
+			for _, processor := range n.processors {
+				ajax, doesAjax := processor.(AjaxResponseProcessor)
+				if doesAjax && ajax.IsAjaxResponder() {
+					return processor.Process(w, req, data, "")
+				}
+			}
+		}
+	}
+
+	return n.notAcceptable(w)
 }
 
 // Firstly, all Ajax requests are processed by the first available Ajax processor.
@@ -90,45 +132,66 @@ func Negotiate(w http.ResponseWriter, req *http.Request, dataModel interface{}, 
 //
 // See rfc7231-sec5.3.2:
 // http://tools.ietf.org/html/rfc7231#section-5.3.2
-func (n *Negotiator) negotiateHeader(w http.ResponseWriter, req *http.Request, dataModel interface{}, context ...interface{}) error {
-	if IsAjax(req) {
-		for _, processor := range n.processors {
-			ajax, doesAjax := processor.(AjaxResponseProcessor)
-			if doesAjax && ajax.IsAjaxResponder() {
-				return processor.Process(w, req, dataModel, context...)
-			}
-		}
-	}
+//func (n *Negotiator) negotiateHeader(w http.ResponseWriter, req *http.Request, dataModel interface{}, template string) error {
+//	if fn, ok := dataModel.(func() interface{}); ok {
+//		dataModel = fn()
+//	}
+//
+//	if IsAjax(req) {
+//		for _, processor := range n.processors {
+//			ajax, doesAjax := processor.(AjaxResponseProcessor)
+//			if doesAjax && ajax.IsAjaxResponder() {
+//				return processor.Process(w, req, dataModel, template)
+//			}
+//		}
+//	}
+//
+//	if len(n.processors) > 0 {
+//		mrs := header.ParseMediaRanges(req.Header.Get(Accept)).WithDefault()
+//		charsets := header.Parse(req.Header.Get(AcceptCharset)).WithDefault()
+//		languages := header.Parse(req.Header.Get(AcceptLanguage)).WithDefault()
+//
+//		for _, accepted := range mrs {
+//			if accepted.Quality > 0 {
+//				for _, cs := range charsets {
+//					if cs.Quality > 0 {
+//						for _, lang := range languages {
+//							if lang.Quality > 0 {
+//								for _, processor := range n.processors {
+//									if processor.CanProcess(accepted.Value(), lang.Value) {
+//										return processor.Process(w, req, dataModel, template)
+//									}
+//								}
+//							}
+//						}
+//					}
+//				}
+//			}
+//		}
+//	}
+//
+//	n.errorHandler(w, "", http.StatusNotAcceptable)
+//	return nil
+//}
 
-	if len(n.processors) > 0 {
-		acceptHeader := req.Header.Get("Accept")
-		if acceptHeader == "" {
-			return n.processors[0].Process(w, req, dataModel, context...)
-		}
+// IsAjax tests whether a request has the Ajax header sent by browsers for XHR requests.
+func IsAjax(req *http.Request) bool {
+	return req.Header.Get(XRequestedWith) == XMLHttpRequest
+}
 
-		for _, mr := range header.ParseAcceptHeader(acceptHeader) {
-			if mr.Type == "" && mr.Subtype == "" {
-				continue
-			}
-
-			if mr.Type == "*" && mr.Subtype == "*" {
-				return n.processors[0].Process(w, req, dataModel, context...)
-			}
-
-			for _, processor := range n.processors {
-				if processor.CanProcess(mr.Value()) {
-					return processor.Process(w, req, dataModel, context...)
-				}
-			}
-		}
-	}
-
-	n.errorHandler(w, "", http.StatusNotAcceptable)
+func (n *Negotiator) notAcceptable(w http.ResponseWriter) error {
+	n.errorHandler(w, "the accepted formats are not offered by the server", http.StatusNotAcceptable)
 	return nil
 }
 
-// IsAjax tests whether a request has the Ajax header.
-func IsAjax(req *http.Request) bool {
-	xRequestedWith, ok := req.Header[xRequestedWith]
-	return ok && len(xRequestedWith) == 1 && xRequestedWith[0] == xmlHttpRequest
+func equalOrWildcard(accepted, offered string) bool {
+	return offered == "" || accepted == "*" || accepted == offered
+}
+
+func split(value string, b byte) (string, string) {
+	i := strings.IndexByte(value, b)
+	if i < 0 {
+		return value, ""
+	}
+	return value[:i], value[i+1:]
 }

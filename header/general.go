@@ -19,7 +19,7 @@ const qualityParam = "q"
 // header value and sorts the parts. These are returned in order with the most
 // preferred first.
 func Parse(acceptXyzHeader string) PrecedenceValues {
-	wvs := splitHeaderParts(acceptXyzHeader)
+	wvs := splitHeaderParts(strings.ToLower(acceptXyzHeader))
 	sort.Stable(wvByPrecedence(wvs))
 	return wvs
 }
