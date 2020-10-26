@@ -82,13 +82,13 @@ func Test_should_return_406_if_no_matching_accept_header(t *testing.T) {
 	req.Header.Add("Accept", "image/png")
 	recorder := httptest.NewRecorder()
 
-	err := negotiator.Negotiate(recorder, req, Offer{Data: "foo"})
+	err := negotiator.Negotiate(recorder, req, Offer{Data: "foo", MediaType: "text/test"})
 
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(recorder.Code).To(Equal(http.StatusNotAcceptable))
 }
 
-func Test_should_not_accept_when_explicitly_excluded1(t *testing.T) {
+func Test_should_not_accept_when_media_range_is_explicitly_excluded(t *testing.T) {
 	g := NewGomegaWithT(t)
 	var fakeResponseProcessor = &fakeProcessor{}
 	negotiator := New(fakeResponseProcessor).WithLogger(testLogger(t))
@@ -97,23 +97,6 @@ func Test_should_not_accept_when_explicitly_excluded1(t *testing.T) {
 	// this header means "anything but text/test"
 	req.Header.Add("Accept", "text/test;q=0, */*") // excluded
 	req.Header.Add("Accept-Language", "en")        // accepted
-	recorder := httptest.NewRecorder()
-
-	err := negotiator.Negotiate(recorder, req, Offer{Data: "foo", MediaType: "text/test", Language: "en"})
-
-	g.Expect(err).NotTo(HaveOccurred())
-	g.Expect(recorder.Code).To(Equal(http.StatusNotAcceptable))
-}
-
-func Test_should_not_accept_when_explicitly_excluded2(t *testing.T) {
-	g := NewGomegaWithT(t)
-	var fakeResponseProcessor = &fakeProcessor{}
-	negotiator := New(fakeResponseProcessor).WithLogger(testLogger(t))
-
-	req, _ := http.NewRequest("GET", "/", nil)
-	// this header means "anything but en"
-	req.Header.Add("Accept-Language", "en;q=0, *") // excluded
-	req.Header.Add("Accept", "text/test, */*")     // accepted
 	recorder := httptest.NewRecorder()
 
 	err := negotiator.Negotiate(recorder, req, Offer{Data: "foo", MediaType: "text/test", Language: "en"})

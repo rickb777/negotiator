@@ -100,32 +100,48 @@ func (n *Negotiator) Negotiate(w http.ResponseWriter, req *http.Request, offers 
 		return n.notAcceptable(w)
 	}
 
+	return n.negotiate(w, req, offers)
+}
+
+func (n *Negotiator) negotiate(w http.ResponseWriter, req *http.Request, offers Offers) error {
 	mrs := header.ParseMediaRanges(req.Header.Get(Accept)).WithDefault()
 	languages := header.Parse(req.Header.Get(AcceptLanguage)).WithDefault()
-	//charsets := header.Parse(req.Header.Get(AcceptCharset)).WithDefault()
-	//encodings := header.Parse(req.Header.Get(AcceptEncoding)).WithDefault()
 
-	// The first pass checks for exact matches, and this includes exclusions (q=0)
-	// The second pass allows wildcard matching.
-	for pass := 1; pass <= 2; pass++ {
-		allowWildcard := pass == 2
+	// first pass - remove offers that match exclusions
+	// (this doesn't apply to language exclusions because we always allow at least one language match)
+	excluded := make([]bool, len(offers))
+	for i, offer := range offers {
+		offeredType, offeredSubtype := split(offer.MediaType, '/')
 
-		for _, offer := range offers {
+		for _, accepted := range mrs {
+			if accepted.Quality <= 0 &&
+				accepted.Type == offeredType &&
+				accepted.Subtype == offeredSubtype {
+
+				excluded[i] = true
+			}
+		}
+	}
+
+	// second pass - find the first matching media-range and language combination
+	for i, offer := range offers {
+		if !excluded[i] {
 			offeredType, offeredSubtype := split(offer.MediaType, '/')
 
 			for _, accepted := range mrs {
 				for _, lang := range languages {
 					n.info("200 compared", accepted.Value(), lang.Value, offer)
 
-					if equalOrWildcard(accepted.Type, offeredType, allowWildcard) &&
-						equalOrWildcard(accepted.Subtype, offeredSubtype, allowWildcard) &&
-						equalOrWildcard(lang.Value, offer.Language, allowWildcard) {
+					if equalOrWildcard(accepted.Type, offeredType) &&
+						equalOrWildcard(accepted.Subtype, offeredSubtype) &&
+						equalOrWildcard(lang.Value, offer.Language) {
 
 						if accepted.Quality > 0 && lang.Quality > 0 {
 							for _, processor := range n.processors {
 								if accepted.Type == "*" && accepted.Subtype == "*" {
 									n.info("200 matched wildcard", accepted.Value(), lang.Value, offer)
 									return process(processor, w, req, offer)
+
 								} else if processor.CanProcess(offer.MediaType, offer.Language) {
 									n.info("200 matched", accepted.Value(), lang.Value, offer)
 									return process(processor, w, req, offer)
@@ -189,9 +205,8 @@ func (n *Negotiator) notAcceptable(w http.ResponseWriter) error {
 	return nil
 }
 
-func equalOrWildcard(accepted, offered string, allowWildcard bool) bool {
-	return offered == "" || accepted == offered ||
-		(allowWildcard && accepted == "*")
+func equalOrWildcard(accepted, offered string) bool {
+	return offered == "" || accepted == "*" || accepted == offered
 }
 
 func split(value string, b byte) (string, string) {
