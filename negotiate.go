@@ -123,13 +123,12 @@ func (n *Negotiator) Negotiate(w http.ResponseWriter, req *http.Request, offers 
 
 						if accepted.Quality > 0 && lang.Quality > 0 {
 							for _, processor := range n.processors {
-								data := dereferenceDataProviders(offer.Data, offer.Language)
 								if accepted.Type == "*" && accepted.Subtype == "*" {
 									n.info("200 matched wildcard", accepted.Value(), lang.Value, offer)
-									return processor.Process(w, req, data, offer.Template)
+									return process(processor, w, req, offer)
 								} else if processor.CanProcess(offer.MediaType, offer.Language) {
 									n.info("200 matched", accepted.Value(), lang.Value, offer)
-									return processor.Process(w, req, data, offer.Template)
+									return process(processor, w, req, offer)
 								}
 							}
 						} else {
@@ -143,6 +142,14 @@ func (n *Negotiator) Negotiate(w http.ResponseWriter, req *http.Request, offers 
 	}
 
 	return n.notAcceptable(w)
+}
+
+func process(processor ResponseProcessor, w http.ResponseWriter, req *http.Request, offer Offer) error {
+	if offer.Language != "" {
+		w.Header().Set("Content-Language", offer.Language)
+	}
+	data := dereferenceDataProviders(offer.Data, offer.Language)
+	return processor.Process(w, req, data, offer.Template)
 }
 
 func (n *Negotiator) info(msg, accepted, lang string, offer Offer) {
