@@ -138,12 +138,15 @@ func (n *Negotiator) negotiate(w http.ResponseWriter, req *http.Request, offers 
 
 						if accepted.Quality > 0 && lang.Quality > 0 {
 							for _, processor := range n.processors {
+								if processor.CanProcess(offer.MediaType, offer.Language) {
+									n.info("200 matched", accepted.Value(), lang.Value, offer)
+									return process(processor, w, req, offer)
+								}
+							}
+
+							for _, processor := range n.processors {
 								if accepted.Type == "*" && accepted.Subtype == "*" {
 									n.info("200 matched wildcard", accepted.Value(), lang.Value, offer)
-									return process(processor, w, req, offer)
-
-								} else if processor.CanProcess(offer.MediaType, offer.Language) {
-									n.info("200 matched", accepted.Value(), lang.Value, offer)
 									return process(processor, w, req, offer)
 								}
 							}

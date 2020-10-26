@@ -14,7 +14,7 @@ import (
 
 func Test_should_add_custom_response_processors(t *testing.T) {
 	g := NewGomegaWithT(t)
-	var fakeResponseProcessor = &fakeProcessor{}
+	var fakeResponseProcessor = &fakeProcessor{match: "text/test"}
 	negotiator := NewWithJSONAndXML(fakeResponseProcessor)
 
 	g.Expect(len(negotiator.processors)).To(Equal(3))
@@ -22,7 +22,7 @@ func Test_should_add_custom_response_processors(t *testing.T) {
 
 func Test_should_add_custom_response_processors2(t *testing.T) {
 	g := NewGomegaWithT(t)
-	var fakeResponseProcessor = &fakeProcessor{}
+	var fakeResponseProcessor = &fakeProcessor{match: "text/test"}
 	negotiator := New().Add(NewJSON(), NewXML()).Add(fakeResponseProcessor)
 
 	g.Expect(len(negotiator.processors)).To(Equal(3))
@@ -30,7 +30,7 @@ func Test_should_add_custom_response_processors2(t *testing.T) {
 
 func Test_should_add_custom_response_processors_to_beginning(t *testing.T) {
 	g := NewGomegaWithT(t)
-	var fakeResponseProcessor = &fakeProcessor{}
+	var fakeResponseProcessor = &fakeProcessor{match: "text/test"}
 	negotiator := NewWithJSONAndXML(fakeResponseProcessor)
 
 	firstProcessor := negotiator.processors[0]
@@ -44,7 +44,7 @@ func Test_should_add_custom_response_processors_to_beginning(t *testing.T) {
 
 func Test_should_use_default_processor_if_no_accept_header(t *testing.T) {
 	g := NewGomegaWithT(t)
-	var fakeResponseProcessor = &fakeProcessor{}
+	var fakeResponseProcessor = &fakeProcessor{match: "text/test"}
 	negotiator := New(fakeResponseProcessor).WithLogger(testLogger(t))
 
 	req, _ := http.NewRequest("GET", "/", nil)
@@ -54,7 +54,7 @@ func Test_should_use_default_processor_if_no_accept_header(t *testing.T) {
 
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(recorder.Code).To(Equal(http.StatusOK))
-	g.Expect(recorder.Body.String()).To(Equal("foo"))
+	g.Expect(recorder.Body.String()).To(Equal("text/test | foo"))
 }
 
 func Test_should_give_JSON_response_for_ajax_requests(t *testing.T) {
@@ -75,7 +75,7 @@ func Test_should_give_JSON_response_for_ajax_requests(t *testing.T) {
 
 func Test_should_return_406_if_no_matching_accept_header(t *testing.T) {
 	g := NewGomegaWithT(t)
-	var fakeResponseProcessor = &fakeProcessor{}
+	var fakeResponseProcessor = &fakeProcessor{match: "text/test"}
 	negotiator := New(fakeResponseProcessor).WithLogger(testLogger(t))
 
 	req, _ := http.NewRequest("GET", "/", nil)
@@ -88,9 +88,9 @@ func Test_should_return_406_if_no_matching_accept_header(t *testing.T) {
 	g.Expect(recorder.Code).To(Equal(http.StatusNotAcceptable))
 }
 
-func Test_should_not_accept_when_media_range_is_explicitly_excluded(t *testing.T) {
+func Test_should_return_406_when_media_range_is_explicitly_excluded(t *testing.T) {
 	g := NewGomegaWithT(t)
-	var fakeResponseProcessor = &fakeProcessor{}
+	var fakeResponseProcessor = &fakeProcessor{match: "text/test"}
 	negotiator := New(fakeResponseProcessor).WithLogger(testLogger(t))
 
 	req, _ := http.NewRequest("GET", "/", nil)
@@ -107,7 +107,7 @@ func Test_should_not_accept_when_media_range_is_explicitly_excluded(t *testing.T
 
 func Test_should_negotiate_and_write_to_response_body(t *testing.T) {
 	g := NewGomegaWithT(t)
-	var fakeResponseProcessor = &fakeProcessor{}
+	var fakeResponseProcessor = &fakeProcessor{match: "text/test"}
 	negotiator := New(fakeResponseProcessor).WithLogger(testLogger(t))
 
 	req, _ := http.NewRequest("GET", "/", nil)
@@ -119,12 +119,12 @@ func Test_should_negotiate_and_write_to_response_body(t *testing.T) {
 
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(recorder.Code).To(Equal(http.StatusOK))
-	g.Expect(recorder.Body.String()).To(Equal("foo"))
+	g.Expect(recorder.Body.String()).To(Equal("text/test | foo"))
 }
 
 func Test_should_match_subtype_wildcard(t *testing.T) {
 	g := NewGomegaWithT(t)
-	var fakeResponseProcessor = &fakeProcessor{}
+	var fakeResponseProcessor = &fakeProcessor{match: "text/test"}
 	negotiator := New(fakeResponseProcessor).WithLogger(testLogger(t))
 
 	req, _ := http.NewRequest("GET", "/", nil)
@@ -135,12 +135,12 @@ func Test_should_match_subtype_wildcard(t *testing.T) {
 
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(recorder.Code).To(Equal(http.StatusOK))
-	g.Expect(recorder.Body.String()).To(Equal("foo"))
+	g.Expect(recorder.Body.String()).To(Equal("text/test | foo"))
 }
 
 func Test_should_match_language_wildcard_and_send_content_language_header(t *testing.T) {
 	g := NewGomegaWithT(t)
-	var fakeResponseProcessor = &fakeProcessor{}
+	var fakeResponseProcessor = &fakeProcessor{match: "text/test"}
 	negotiator := New(fakeResponseProcessor).WithLogger(testLogger(t))
 
 	req, _ := http.NewRequest("GET", "/", nil)
@@ -152,12 +152,12 @@ func Test_should_match_language_wildcard_and_send_content_language_header(t *tes
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(recorder.Code).To(Equal(http.StatusOK))
 	g.Expect(recorder.Header().Get("Content-Language")).To(Equal("en"))
-	g.Expect(recorder.Body.String()).To(Equal("foo"))
+	g.Expect(recorder.Body.String()).To(Equal("text/test | foo"))
 }
 
 func Test_should_negotiate_a_default_processor(t *testing.T) {
 	g := NewGomegaWithT(t)
-	var fakeResponseProcessor = &fakeProcessor{}
+	var fakeResponseProcessor = &fakeProcessor{match: "text/test"}
 	negotiator := New(fakeResponseProcessor).WithLogger(testLogger(t))
 
 	req, _ := http.NewRequest("GET", "/", nil)
@@ -168,24 +168,52 @@ func Test_should_negotiate_a_default_processor(t *testing.T) {
 
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(recorder.Code).To(Equal(http.StatusOK))
-	g.Expect(recorder.Body.String()).To(Equal("foo"))
+	g.Expect(recorder.Body.String()).To(Equal("text/test | foo"))
 
 	recorder = httptest.NewRecorder()
 	err = negotiator.Negotiate(recorder, req, Offer{Data: "bar", MediaType: "text/test"})
 
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(recorder.Code).To(Equal(http.StatusOK))
-	g.Expect(recorder.Body.String()).To(Equal("bar"))
+	g.Expect(recorder.Body.String()).To(Equal("text/test | bar"))
 }
 
-type fakeProcessor struct{}
+func Test_should_negotiate_one_of_the_processors(t *testing.T) {
+	g := NewGomegaWithT(t)
+	var a = &fakeProcessor{match: "text/a"}
+	var b = &fakeProcessor{match: "text/b"}
+	negotiator := New(a, b).WithLogger(testLogger(t))
 
-func (*fakeProcessor) CanProcess(mediaRange string, lang string) bool {
-	return mediaRange == "text/test" && (lang == "" || lang == "en")
+	req, _ := http.NewRequest("GET", "/", nil)
+	req.Header.Add("Accept", "text/a, text/b")
+
+	recorder := httptest.NewRecorder()
+	err := negotiator.Negotiate(recorder, req, Offer{Data: "foo", MediaType: "text/a"})
+
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(recorder.Code).To(Equal(http.StatusOK))
+	g.Expect(recorder.Body.String()).To(Equal("text/a | foo"))
+
+	recorder = httptest.NewRecorder()
+	err = negotiator.Negotiate(recorder, req, Offer{Data: "bar", MediaType: "text/b"})
+
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(recorder.Code).To(Equal(http.StatusOK))
+	g.Expect(recorder.Body.String()).To(Equal("text/b | bar"))
 }
 
-func (*fakeProcessor) Process(w http.ResponseWriter, req *http.Request, model interface{}, _ string) error {
-	w.Write([]byte(model.(string)))
+//-------------------------------------------------------------------------------------------------
+
+type fakeProcessor struct {
+	match string
+}
+
+func (p *fakeProcessor) CanProcess(mediaRange string, lang string) bool {
+	return mediaRange == p.match && (lang == "" || lang == "en")
+}
+
+func (p *fakeProcessor) Process(w http.ResponseWriter, req *http.Request, model interface{}, _ string) error {
+	w.Write([]byte(fmt.Sprintf("%s | %v", p.match, model)))
 	return nil
 }
 
