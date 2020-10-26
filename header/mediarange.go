@@ -54,9 +54,14 @@ func (mr MediaRange) StrongerThan(other MediaRange) bool {
 	return false
 }
 
-// Value gets the conjoined type and subtype string.
+// Value gets the conjoined type and subtype string, plus any parameters (but not extensions).
 func (mr MediaRange) Value() string {
-	return fmt.Sprintf("%s/%s", mr.Type, mr.Subtype)
+	buf := &strings.Builder{}
+	fmt.Fprintf(buf, "%s/%s", mr.Type, mr.Subtype)
+	for _, p := range mr.Params {
+		fmt.Fprintf(buf, ";%s=%s", p.Key, p.Value)
+	}
+	return buf.String()
 }
 
 func (mr MediaRange) String() string {

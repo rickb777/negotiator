@@ -35,7 +35,7 @@ func TestParseAcceptHeader_defaults_quality_if_not_explicit(t *testing.T) {
 
 func TestParseAcceptHeader_should_parse_quality(t *testing.T) {
 	g := NewGomegaWithT(t)
-	mr := ParseMediaRanges("application/json;q=0.9")
+	mr := ParseMediaRanges("application/json; q=0.9")
 
 	g.Expect(len(mr)).To(Equal(1))
 	g.Expect(mr[0].Type).To(Equal("application"))
@@ -107,7 +107,7 @@ func TestMediaRanges_should_handle_precedence(t *testing.T) {
 
 func TestMediaRanges_should_not_remove_accept_extension(t *testing.T) {
 	g := NewGomegaWithT(t)
-	mr := ParseMediaRanges("text/html;q=0.5;a=1;b=2")
+	mr := ParseMediaRanges("text/html; q=0.5; a=1;b=2")
 
 	g.Expect(len(mr)).To(Equal(1))
 	g.Expect(mr[0].Type).To(Equal("text"))
@@ -121,7 +121,7 @@ func TestMediaRanges_string(t *testing.T) {
 	g := NewGomegaWithT(t)
 	header := "text/html;level=1;q=0.9;a=1;b=2, text/html;q=0.5, text/*;q=0.3"
 	mr := ParseMediaRanges(header)
-	g.Expect(mr[0].Value()).To(Equal("text/html"))
+	g.Expect(mr[0].Value()).To(Equal("text/html;level=1"))
 	g.Expect(mr.String()).To(Equal(header))
 }
 
@@ -172,58 +172,21 @@ func TestMediaRanges_should_handle_quality_precedence(t *testing.T) {
 	}
 }
 
-//func TestMediaRanges_should_handle_qualities(t *testing.T) {
-//	g := NewGomegaWithT(t)
-//	// from http://tools.ietf.org/html/rfc7231#section-5.3.2
-//	// and errata https://www.rfc-editor.org/errata/rfc7231
-//
-//	cases := []string{
-//		"text/*;q=0.3, text/plain;q=0.7, text/plain;format=flowed, text/plain;format=fixed;q=0.4, */*;q=0.5",
-//		//"text/plain;q=0.7, text/plain;format=flowed, text/plain;format=fixed;q=0.4, */*;q=0.5, text/*;q=0.3",
-//		//"text/plain;format=flowed, text/plain;format=fixed;q=0.4, */*;q=0.5, text/*;q=0.3, text/plain;q=0.7",
-//		//"text/plain;format=fixed;q=0.4, */*;q=0.5, text/*;q=0.3, text/plain;q=0.7, text/plain;format=flowed",
-//	}
-//	for _, c := range cases {
-//		mr := ParseMediaRanges(c)
-//		g.Expect(5, len(mr))
-//
-//		g.Expect("text/plain;format=flowed", mr[0].Value, c)
-//		g.Expect(1.0, mr[0].Quality, c)
-//
-//		g.Expect("text/plain", mr[1].Value, c)
-//		g.Expect(0.7, mr[1].Quality, c)
-//
-//		g.Expect("*/*", mr[3].Value, c)
-//		g.Expect(0.5, mr[3].Quality, c)
-//
-//		g.Expect("text/plain;format=fixed", mr[3].Value, c)
-//		g.Expect(0.4, mr[3].Quality, c)
-//
-//		g.Expect("text/html;level=2", mr[3].Value, c)
-//		g.Expect(0.4, mr[3].Quality, c)
-//
-//		g.Expect("text/html", mr[1].Value, c)
-//		g.Expect(0.3, mr[1].Quality, c)
-//	}
-//}
+func TestMediaRanges_should_ignore_case_of_quality_and_whitespace(t *testing.T) {
+	g := NewGomegaWithT(t)
+	mr := ParseMediaRanges("text/* ; q=0.3, text/html ; Q=0.7, text/html;level=2; q=0.4, */*; q=0.5")
 
-//func TestMediaRanges_should_ignore_case_of_quality_and_whitespace(t *testing.T) {
-//	g := NewGomegaWithT(t)
-//	// from http://tools.ietf.org/html/rfc7231#section-5.3.1
-//	// and http://tools.ietf.org/html/rfc7231#section-5.3.2
-//	mr := ParseMediaRanges("text/* ; q=0.3, text/html ; Q=0.7, text/html;level=2; q=0.4, */*; q=0.5")
-//
-//	g.Expect(4, len(mr))
-//
-//	g.Expect("text/html", mr[0].Value)
-//	g.Expect(0.7, mr[0].Quality)
-//
-//	g.Expect("*/*", mr[1].Value)
-//	g.Expect(0.5, mr[1].Quality)
-//
-//	g.Expect("text/html;level=2", mr[2].Value)
-//	g.Expect(0.4, mr[2].Quality)
-//
-//	g.Expect("text/*", mr[3].Value)
-//	g.Expect(0.3, mr[3].Quality)
-//}
+	g.Expect(4).To(Equal(len(mr)))
+
+	g.Expect("text/html").To(Equal(mr[0].Value()))
+	g.Expect(0.7).To(Equal(mr[0].Quality))
+
+	g.Expect("*/*").To(Equal(mr[1].Value()))
+	g.Expect(0.5).To(Equal(mr[1].Quality))
+
+	g.Expect("text/html;level=2").To(Equal(mr[2].Value()))
+	g.Expect(0.4).To(Equal(mr[2].Quality))
+
+	g.Expect("text/*").To(Equal(mr[3].Value()))
+	g.Expect(0.3).To(Equal(mr[3].Quality))
+}
