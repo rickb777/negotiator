@@ -27,7 +27,7 @@ type LanguageDataProvider func(language string) interface{}
 type Offer struct {
 	MediaType string
 	Language  string // blank if not relevant
-	Template  string // blank if not relevatn
+	Template  string // blank if not relevant
 	Data      interface{}
 }
 
@@ -37,6 +37,31 @@ func (offers Offers) MediaTypes() []string {
 	ss := make([]string, len(offers))
 	for i, o := range offers {
 		ss[i] = o.MediaType
+	}
+	return ss
+}
+
+func (offers Offers) setDefaultWildcards() Offers {
+	for _, o := range offers {
+		// if any have blanks, update all that are blank
+		if o.MediaType == "" || o.Language == "" {
+			return offers.doSetDefaultWildcards()
+		}
+	}
+	// no need to change anything
+	return offers
+}
+
+func (offers Offers) doSetDefaultWildcards() Offers {
+	ss := make(Offers, len(offers))
+	for i, o := range offers {
+		if o.MediaType == "" {
+			o.MediaType = "*/*"
+		}
+		if o.Language == "" {
+			o.Language = "*"
+		}
+		ss[i] = o
 	}
 	return ss
 }

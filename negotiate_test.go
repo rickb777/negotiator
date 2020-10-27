@@ -209,7 +209,7 @@ type fakeProcessor struct {
 }
 
 func (p *fakeProcessor) CanProcess(mediaRange string, lang string) bool {
-	return mediaRange == p.match && (lang == "" || lang == "en")
+	return mediaRange == p.match && (lang == "*" || lang == "en")
 }
 
 func (p *fakeProcessor) Process(w http.ResponseWriter, req *http.Request, model interface{}, _ string) error {

@@ -100,7 +100,7 @@ func (n *Negotiator) Negotiate(w http.ResponseWriter, req *http.Request, offers 
 		return n.notAcceptable(w)
 	}
 
-	return n.negotiate(w, req, offers)
+	return n.negotiate(w, req, Offers(offers).setDefaultWildcards())
 }
 
 func (n *Negotiator) negotiate(w http.ResponseWriter, req *http.Request, offers Offers) error {
@@ -209,7 +209,7 @@ func (n *Negotiator) notAcceptable(w http.ResponseWriter) error {
 }
 
 func equalOrWildcard(accepted, offered string) bool {
-	return offered == "" || accepted == "*" || accepted == offered
+	return offered == "*" || accepted == "*" || accepted == offered
 }
 
 func split(value string, b byte) (string, string) {
