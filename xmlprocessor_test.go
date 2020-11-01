@@ -1,4 +1,4 @@
-package negotiator
+package negotiator_test
 
 import (
 	"encoding/xml"
@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/rickb777/negotiator"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -21,7 +23,7 @@ func TestXMLShouldProcessAcceptHeader(t *testing.T) {
 		{"image/svg+xml", true},
 	}
 
-	processor := NewXML()
+	processor := negotiator.XMLProcessor()
 
 	for _, tt := range acceptTests {
 		result := processor.CanProcess(tt.acceptheader, "")
@@ -32,7 +34,7 @@ func TestXMLShouldProcessAcceptHeader(t *testing.T) {
 func TestXMLShouldReturnNoContentIfNil(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	processor := NewXML()
+	processor := negotiator.XMLProcessor()
 
 	processor.Process(recorder, nil, nil, "")
 
@@ -46,7 +48,7 @@ func TestXMLShouldSetDefaultContentTypeHeader(t *testing.T) {
 		"Joe Bloggs",
 	}
 
-	processor := NewXML()
+	processor := negotiator.XMLProcessor()
 
 	processor.Process(recorder, nil, model, "")
 
@@ -56,11 +58,9 @@ func TestXMLShouldSetDefaultContentTypeHeader(t *testing.T) {
 func TestXMLShouldSetContentTypeHeader(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	model := &ValidXMLUser{
-		"Joe Bloggs",
-	}
+	model := &ValidXMLUser{Name: "Joe Bloggs"}
 
-	processor := NewXML().(ContentTypeSettable).SetContentType("image/svg+xml")
+	processor := negotiator.XMLProcessor().(negotiator.ContentTypeSettable).SetContentType("image/svg+xml")
 
 	processor.Process(recorder, nil, model, "")
 
@@ -74,7 +74,7 @@ func TestXMLShouldSetResponseBody(t *testing.T) {
 		"Joe Bloggs",
 	}
 
-	processor := NewXML()
+	processor := negotiator.XMLProcessor()
 
 	processor.Process(recorder, nil, model, "")
 
@@ -84,11 +84,9 @@ func TestXMLShouldSetResponseBody(t *testing.T) {
 func TestXMlShouldSetResponseBodyWithIndentation(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	model := &ValidXMLUser{
-		"Joe Bloggs",
-	}
+	model := &ValidXMLUser{Name: "Joe Bloggs"}
 
-	processor := NewXMLIndent2Spaces()
+	processor := negotiator.IndentedXMLProcessor("  ")
 
 	processor.Process(recorder, nil, model, "")
 
@@ -98,11 +96,9 @@ func TestXMlShouldSetResponseBodyWithIndentation(t *testing.T) {
 func TestXMLShouldReturnErrorOnError(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	model := &XMLUser{
-		"Joe Bloggs",
-	}
+	model := &XMLUser{Name: "Joe Bloggs"}
 
-	processor := NewXMLIndent2Spaces()
+	processor := negotiator.IndentedXMLProcessor("  ")
 
 	err := processor.Process(recorder, nil, model, "")
 

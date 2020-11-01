@@ -1,10 +1,12 @@
-package negotiator
+package negotiator_test
 
 import (
-	"github.com/stretchr/testify/assert"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/rickb777/negotiator"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCSVShouldProcessAcceptHeader(t *testing.T) {
@@ -17,7 +19,7 @@ func TestCSVShouldProcessAcceptHeader(t *testing.T) {
 		{"text/plain", false},
 	}
 
-	processor := NewCSV()
+	processor := negotiator.CSVProcessor()
 
 	for _, tt := range acceptTests {
 		result := processor.CanProcess(tt.acceptheader, "")
@@ -28,7 +30,7 @@ func TestCSVShouldProcessAcceptHeader(t *testing.T) {
 func TestCSVShouldReturnNoContentIfNil(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	processor := NewCSV()
+	processor := negotiator.CSVProcessor()
 
 	processor.Process(recorder, nil, nil, "")
 
@@ -38,7 +40,7 @@ func TestCSVShouldReturnNoContentIfNil(t *testing.T) {
 func TestCSVShouldSetDefaultContentTypeHeader(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	processor := NewCSV()
+	processor := negotiator.CSVProcessor()
 
 	processor.Process(recorder, nil, "Joe Bloggs", "")
 
@@ -48,7 +50,7 @@ func TestCSVShouldSetDefaultContentTypeHeader(t *testing.T) {
 func TestCSVShouldSetContentTypeHeader(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	processor := NewCSV().(ContentTypeSettable).SetContentType("text/csv-schema")
+	processor := negotiator.CSVProcessor().(negotiator.ContentTypeSettable).SetContentType("text/csv-schema")
 
 	processor.Process(recorder, nil, "Joe Bloggs", "")
 
@@ -81,7 +83,7 @@ func TestCSVShouldSetResponseBody(t *testing.T) {
 		{[][]*hidden{{{tt(2001, 12, 30)}, {tt(2001, 12, 31)}}}, "(2001-12-30),(2001-12-31)\n"},
 	}
 
-	processor := NewCSV()
+	processor := negotiator.CSVProcessor()
 
 	for _, m := range models {
 		recorder := httptest.NewRecorder()
@@ -109,7 +111,7 @@ func TestCSVShouldSetResponseBodyWithTabs(t *testing.T) {
 		{[]Data{{"x", 9, 4, true}, {"y", 7, 1, false}}, "x\t9\t4\ttrue\ny\t7\t1\tfalse\n"},
 	}
 
-	processor := NewCSV('\t')
+	processor := negotiator.CSVProcessor('\t')
 
 	for _, m := range models {
 		recorder := httptest.NewRecorder()
@@ -122,7 +124,7 @@ func TestCSVShouldSetResponseBodyWithTabs(t *testing.T) {
 func TestCSVShouldReturnErrorOnError(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	processor := NewCSV()
+	processor := negotiator.CSVProcessor()
 
 	err := processor.Process(recorder, nil, make(chan int, 0), "")
 
@@ -144,12 +146,3 @@ type hidden struct {
 func (h hidden) String() string {
 	return "(" + h.d.Format("2006-01-02") + ")"
 }
-
-//func (u *User) MarshalCSV() ([]byte, error) {
-//	return nil, errors.New("oops")
-//}
-//
-//func jsontestErrorHandler(w http.ResponseWriter, err error) {
-//	w.WriteHeader(500)
-//	w.Write([]byte(err.Error()))
-//}

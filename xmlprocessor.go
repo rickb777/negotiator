@@ -15,22 +15,17 @@ type xmlProcessor struct {
 	contentType    string
 }
 
-// NewXML creates a new processor for XML without indentation.
-func NewXML() ResponseProcessor {
+// XMLProcessor creates a new processor for XML without indentation.
+func XMLProcessor() ResponseProcessor {
 	return &xmlProcessor{true, "", "", defaultXMLContentType}
 }
 
-// NewXMLIndent creates a new processor for XML with a specified indentation.
-func NewXMLIndent(prefix, index string) ResponseProcessor {
-	return &xmlProcessor{false, prefix, index, defaultXMLContentType}
+// IndentedXMLProcessor creates a new processor for XML with a specified indentation.
+func IndentedXMLProcessor(index string) ResponseProcessor {
+	return &xmlProcessor{false, "", index, defaultXMLContentType}
 }
 
-// NewXMLIndent2Spaces creates a new processor for XML with 2-space indentation.
-func NewXMLIndent2Spaces() ResponseProcessor {
-	return NewXMLIndent("", "  ")
-}
-
-// Implements ContentTypeSettable for this type.
+// SetContentType implements ContentTypeSettable for this type.
 func (p *xmlProcessor) SetContentType(contentType string) ResponseProcessor {
 	p.contentType = contentType
 	return p

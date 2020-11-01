@@ -4,7 +4,8 @@ const (
 	Accept         = "Accept"
 	AcceptLanguage = "Accept-Language"
 	AcceptCharset  = "Accept-Charset"
-	AcceptEncoding = "Accept-Encoding"
+
+	// AcceptEncoding is handled effectively by net/http and can be disregarded here
 
 	XRequestedWith = "X-Requested-With"
 	XMLHttpRequest = "XMLHttpRequest"
@@ -25,7 +26,7 @@ type LanguageDataProvider func(language string) interface{}
 // it is a LanguageDataProvider, and if so that function will have been called with the
 // chosen language as its parameter.
 type Offer struct {
-	MediaType string
+	MediaType string // e.g. "text/html" or blank not relevant
 	Language  string // blank if not relevant
 	Template  string // blank if not relevant
 	Data      interface{}

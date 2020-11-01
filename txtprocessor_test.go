@@ -1,8 +1,10 @@
-package negotiator
+package negotiator_test
 
 import (
 	"net/http/httptest"
 	"testing"
+
+	"github.com/rickb777/negotiator"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -17,7 +19,7 @@ func TestTXTShouldProcessAcceptHeader(t *testing.T) {
 		{"text/csv", false},
 	}
 
-	processor := NewTXT()
+	processor := negotiator.TXTProcessor()
 
 	for _, tt := range acceptTests {
 		result := processor.CanProcess(tt.acceptheader, "")
@@ -28,7 +30,7 @@ func TestTXTShouldProcessAcceptHeader(t *testing.T) {
 func TestTXTShouldReturnNoContentIfNil(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	processor := NewTXT()
+	processor := negotiator.TXTProcessor()
 
 	processor.Process(recorder, nil, nil, "")
 
@@ -38,7 +40,7 @@ func TestTXTShouldReturnNoContentIfNil(t *testing.T) {
 func TestTXTShouldSetDefaultContentTypeHeader(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	processor := NewTXT()
+	processor := negotiator.TXTProcessor()
 
 	processor.Process(recorder, nil, "Joe Bloggs", "")
 
@@ -48,7 +50,7 @@ func TestTXTShouldSetDefaultContentTypeHeader(t *testing.T) {
 func TestTXTShouldSetContentTypeHeader(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	processor := NewTXT().(ContentTypeSettable).SetContentType("text/rtf")
+	processor := negotiator.TXTProcessor().(negotiator.ContentTypeSettable).SetContentType("text/rtf")
 
 	processor.Process(recorder, nil, "Joe Bloggs", "")
 
@@ -65,7 +67,7 @@ func TestTXTShouldSetResponseBody(t *testing.T) {
 		{tm{"Joe Bloggs"}, "Joe Bloggs\n"},
 	}
 
-	processor := NewTXT()
+	processor := negotiator.TXTProcessor()
 
 	for _, m := range models {
 		recorder := httptest.NewRecorder()
@@ -78,7 +80,7 @@ func TestTXTShouldSetResponseBody(t *testing.T) {
 func TestTXTShouldReturnErrorOnError(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	processor := NewTXT()
+	processor := negotiator.TXTProcessor()
 
 	err := processor.Process(recorder, nil, make(chan int, 0), "")
 

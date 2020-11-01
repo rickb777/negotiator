@@ -2,10 +2,11 @@ package negotiator
 
 import (
 	"fmt"
-	"github.com/rickb777/negotiator/header"
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/rickb777/negotiator/header"
 )
 
 const (
@@ -26,13 +27,13 @@ type Negotiator struct {
 	logger       Printer
 }
 
-// NewWithJSONAndXML allows users to pass custom response processors. By default, processors
-// for XML and JSON are already created.
-func NewWithJSONAndXML(responseProcessors ...ResponseProcessor) *Negotiator {
-	return New(append(responseProcessors, NewJSON(), NewXML())...)
+// Default creates a negotiator with all the default processors, supporting
+// JSON, XML, CSV and plain text.
+func Default() *Negotiator {
+	return New(JSONProcessor(), XMLProcessor(), CSVProcessor(), TXTProcessor())
 }
 
-//New allows users to pass custom response processors.
+// New creates a Negotiator with a list of custom response processors.
 func New(responseProcessors ...ResponseProcessor) *Negotiator {
 	return &Negotiator{
 		processors:   responseProcessors,
@@ -41,18 +42,43 @@ func New(responseProcessors ...ResponseProcessor) *Negotiator {
 	}
 }
 
-// Add more response processors. A new Negotiator is returned with the original processors plus
-// the extra processors.
-func (n *Negotiator) Add(responseProcessors ...ResponseProcessor) *Negotiator {
+// Processor gets the ith processor.
+func (n *Negotiator) Processor(i int) ResponseProcessor {
+	return n.processors[i]
+}
+
+// N returns the number of processors.
+func (n *Negotiator) N() int {
+	return len(n.processors)
+}
+
+// Insert more response processors. A new Negotiator is returned with the extra processors
+// plus the original processors. The extra processors are inserted first.
+// Because the processors are checked in order, any overlap of matching media range
+// goes to the first such matching processor.
+func (n *Negotiator) Insert(responseProcessors ...ResponseProcessor) *Negotiator {
 	return &Negotiator{
-		processors:   append(n.processors, responseProcessors...),
+		processors:   append(responseProcessors, n.processors...),
 		errorHandler: n.errorHandler,
-		logger:       func(_ byte, _ string, _ map[string]interface{}) {},
+		logger:       n.logger,
 	}
 }
 
-// With adds a custom error handler. This is used for 406-Not Acceptable cases.
-func (n *Negotiator) With(eh ErrorHandler) *Negotiator {
+// Append more response processors. A new Negotiator is returned with the original processors
+// plus the extra processors. The extra processors are appended last.
+// Because the processors are checked in order, any overlap of matching media range
+// goes to the first such matching processor.
+func (n *Negotiator) Append(responseProcessors ...ResponseProcessor) *Negotiator {
+	return &Negotiator{
+		processors:   append(n.processors, responseProcessors...),
+		errorHandler: n.errorHandler,
+		logger:       n.logger,
+	}
+}
+
+// WithErrorHandler adds a custom error handler. This is used for 406-Not Acceptable cases
+// and dealing with 500-Internal Server Error in MustNegotiate.
+func (n *Negotiator) WithErrorHandler(eh ErrorHandler) *Negotiator {
 	return &Negotiator{
 		processors:   n.processors,
 		errorHandler: eh,
@@ -67,11 +93,6 @@ func (n *Negotiator) WithLogger(printer Printer) *Negotiator {
 		errorHandler: n.errorHandler,
 		logger:       printer,
 	}
-}
-
-// NegotiateWithJSONAndXML handles your model based on the HTTP Accept-Xyz headers. Only XML and JSON are handled.
-func NegotiateWithJSONAndXML(w http.ResponseWriter, req *http.Request, offers ...Offer) error {
-	return NewWithJSONAndXML().Negotiate(w, req, offers...)
 }
 
 // MustNegotiate negotiates your model based on the HTTP Accept and Accept-... headers.

@@ -14,22 +14,17 @@ type jsonProcessor struct {
 	contentType    string
 }
 
-// NewJSON creates a new processor for JSON without indentation.
-func NewJSON() ResponseProcessor {
+// JSONProcessor creates a new processor for JSON without indentation.
+func JSONProcessor() ResponseProcessor {
 	return &jsonProcessor{true, "", "", defaultJSONContentType}
 }
 
-// NewJSONIndent creates a new processor for JSON with a specified indentation.
-func NewJSONIndent(prefix, index string) ResponseProcessor {
-	return &jsonProcessor{false, prefix, index, defaultJSONContentType}
+// IndentedJSONProcessor creates a new processor for JSON with a specified indentation.
+func IndentedJSONProcessor(indent string) ResponseProcessor {
+	return &jsonProcessor{false, "", indent, defaultJSONContentType}
 }
 
-// NewJSONIndent2Spaces creates a new processor for JSON with 2-space indentation.
-func NewJSONIndent2Spaces() ResponseProcessor {
-	return NewJSONIndent("", "  ")
-}
-
-// Implements ContentTypeSettable for this type.
+// SetContentType implements ContentTypeSettable for this type.
 func (p *jsonProcessor) SetContentType(contentType string) ResponseProcessor {
 	p.contentType = contentType
 	return p

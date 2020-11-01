@@ -6,4 +6,4 @@ install:
   - go mod download
 
 script:
-  - go test -v ./...
+  - ./build+test.sh

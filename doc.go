@@ -8,10 +8,12 @@
 //
 // For more information visit http://github.com/rickb777/negotiator
 //
-//	func getUser(w http.ResponseWriter, req *http.Request) {
-//	    user := &User{"Joe", "Bloggs"}
-//	    negotiator.NegotiateWithJSONAndXML(w, req, negotiator.Offer{Data: user})
-//	}
+//   import "github.com/rickb777/negotiator"
+//   ...
+//	 func getUser(w http.ResponseWriter, req *http.Request) {
+//	     user := &User{"Joe", "Bloggs"}
+//	     negotiator.NegotiateWithJSONAndXML(w, req, negotiator.Offer{Data: user})
+//	 }
 //
 // Accept - from https://tools.ietf.org/html/rfc7231#section-5.3.2:
 //

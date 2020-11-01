@@ -15,7 +15,7 @@ type csvProcessor struct {
 	contentType string
 }
 
-// NewCSV creates an output processor that serialises a dataModel in CSV form. With no arguments, the default
+// CSVProcessor creates an output processor that serialises a dataModel in CSV form. With no arguments, the default
 // format is comma-separated; you can supply any rune to be used as an alternative separator.
 //
 // Model values should be one of the following:
@@ -31,14 +31,14 @@ type csvProcessor struct {
 // * struct for some struct in which all the fields are exported and of simple types (as above).
 //
 // * []struct for some struct in which all the fields are exported and of simple types (as above).
-func NewCSV(comma ...rune) ResponseProcessor {
+func CSVProcessor(comma ...rune) ResponseProcessor {
 	if len(comma) > 0 {
 		return &csvProcessor{comma[0], defaultCSVContentType}
 	}
 	return &csvProcessor{',', defaultCSVContentType}
 }
 
-// Implements ContentTypeSettable for this type.
+// SetContentType implements ContentTypeSettable for this type.
 func (p *csvProcessor) SetContentType(contentType string) ResponseProcessor {
 	p.contentType = contentType
 	return p

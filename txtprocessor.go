@@ -13,7 +13,7 @@ type txtProcessor struct {
 	contentType string
 }
 
-// NewTXT creates an output processor that serialises strings in text/plain form.
+// TXTProcessor creates an output processor that serialises strings in text/plain form.
 // Model values should be one of the following:
 //
 // * string
@@ -21,11 +21,11 @@ type txtProcessor struct {
 // * fmt.Stringer
 //
 // * encoding.TextMarshaler
-func NewTXT() ResponseProcessor {
+func TXTProcessor() ResponseProcessor {
 	return &txtProcessor{defaultTxtContentType}
 }
 
-// Implements ContentTypeSettable for this type.
+// SetContentType implements ContentTypeSettable for this type.
 func (p *txtProcessor) SetContentType(contentType string) ResponseProcessor {
 	p.contentType = contentType
 	return p

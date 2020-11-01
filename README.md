@@ -12,11 +12,12 @@ This is a library that handles content negotiation in HTTP server applications w
 
 To return JSON/XML out of the box simple put this in your route handler:
 ```
+import "github.com/rickb777/negotiator"
+...
 func getUser(w http.ResponseWriter, req *http.Request) {
     user := &User{"Joe","Bloggs"}
-    if err := negotiator.Negotiate(w, req, negotiator.Offer{Data: user}); err != nil {
-      http.Error(w, err.Error(), http.StatusInternalServerError)
-    }
+    n := negotiator.NewWithJSONAndXML()
+    n.MustNegotiate(w, req, negotiator.Offer{Data: user})
 }
 ```
 
@@ -26,11 +27,13 @@ To add your own negotiator, for example you want to write a PDF with your model,
 
 1) Create a type that conforms to the [ResponseProcessor](https://github.com/rickb777/negotiator/blob/master/responseprocessor.go) interface
 
-2) Call `negotiator.New(responseProcessors ...ResponseProcessor)` and pass in a your custom processor. When your request handler calls `negotiator.Negotiate(w,req,model,errorHandler)` it will render a PDF if your Accept header defined it wanted a PDF response.
+2) Where you call `negotiator.New(responseProcessors ...ResponseProcessor)`, pass in a your custom processor. When your request handler calls `negotiator.Negotiate(w, req, offers...)` it will render a PDF if your Accept header defined it wanted a PDF response.
 
 ### When a request is Not Acceptable
 
-You will create a `Negotiator` with one or more response processors. If a request is handled that is not claimed by and processor, a Not Acceptable (406) response is returned. This uses the default `http.Error` function to render the response, but a custom error handler can be plugged in using `Negotiator.With(myHandler)`.
+Having created a `Negotiator` with one or more response processors, if a request is handled that is not claimed by and processor, a Not Acceptable (406) response is returned. 
+
+By default, this uses the standard `http.Error` function (from `net/http`) to render the response, If needed, a custom error handler can be plugged in using `Negotiator.WithErrorHandler(myHandler)`.
 
 ## Accept Handling
 
