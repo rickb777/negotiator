@@ -44,8 +44,9 @@ func Test_should_add_custom_response_processors_to_beginning(t *testing.T) {
 
 func Test_should_use_default_processor_if_no_accept_header(t *testing.T) {
 	g := NewGomegaWithT(t)
-	var fakeResponseProcessor = &fakeProcessor{match: "text/test"}
-	negotiator := New(fakeResponseProcessor).WithLogger(testLogger(t))
+	var a = &fakeProcessor{match: "text/test"}
+	var b = &fakeProcessor{match: "text/plain"}
+	negotiator := New(a, b).WithLogger(testLogger(t))
 
 	req, _ := http.NewRequest("GET", "/", nil)
 	recorder := httptest.NewRecorder()
@@ -78,16 +79,21 @@ func Test_should_return_406_if_no_matching_accept_header(t *testing.T) {
 	var fakeResponseProcessor = &fakeProcessor{match: "text/test"}
 	negotiator := New(fakeResponseProcessor).WithLogger(testLogger(t))
 
-	req, _ := http.NewRequest("GET", "/", nil)
-	req.Header.Add("Accept", "image/png")
-	recorder := httptest.NewRecorder()
+	cases := []string{"*/*", "text/test"}
 
-	err := negotiator.Negotiate(recorder, req, Offer{Data: "foo", MediaType: "text/test"})
+	for _, c := range cases {
+		req, _ := http.NewRequest("GET", "/", nil)
+		req.Header.Add("Accept", "image/png")
+		recorder := httptest.NewRecorder()
 
-	g.Expect(err).NotTo(HaveOccurred())
-	g.Expect(recorder.Code).To(Equal(http.StatusNotAcceptable))
+		err := negotiator.Negotiate(recorder, req, Offer{Data: "foo", MediaType: c})
+
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(recorder.Code).To(Equal(http.StatusNotAcceptable))
+	}
 }
 
+// RFC7231 suggests that 406 is sent when no media range matches are possible.
 func Test_should_return_406_when_media_range_is_explicitly_excluded(t *testing.T) {
 	g := NewGomegaWithT(t)
 	var fakeResponseProcessor = &fakeProcessor{match: "text/test"}
@@ -103,6 +109,24 @@ func Test_should_return_406_when_media_range_is_explicitly_excluded(t *testing.T
 
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(recorder.Code).To(Equal(http.StatusNotAcceptable))
+}
+
+// RFC7231 recommends that, when no language matches are possible  a response should be sent anyway.
+func Test_should_return_200_even_when_language_is_explicitly_excluded(t *testing.T) {
+	g := NewGomegaWithT(t)
+	var fakeResponseProcessor = &fakeProcessor{match: "text/test"}
+	negotiator := New(fakeResponseProcessor).WithLogger(testLogger(t))
+
+	req, _ := http.NewRequest("GET", "/", nil)
+	// this header means "anything but text/test"
+	req.Header.Add("Accept", "text/test, */*")
+	req.Header.Add("Accept-Language", "en;q=0 *") // anything but "en"
+	recorder := httptest.NewRecorder()
+
+	err := negotiator.Negotiate(recorder, req, Offer{Data: "foo", MediaType: "text/test", Language: "en"})
+
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(recorder.Code).To(Equal(http.StatusOK))
 }
 
 func Test_should_negotiate_and_write_to_response_body(t *testing.T) {
