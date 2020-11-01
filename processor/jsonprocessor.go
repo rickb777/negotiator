@@ -1,4 +1,4 @@
-package negotiator
+package processor
 
 import (
 	"encoding/json"
@@ -14,13 +14,13 @@ type jsonProcessor struct {
 	contentType    string
 }
 
-// JSONProcessor creates a new processor for JSON without indentation.
-func JSONProcessor() ResponseProcessor {
+// JSON creates a new processor for JSON without indentation.
+func JSON() ResponseProcessor {
 	return &jsonProcessor{true, "", "", defaultJSONContentType}
 }
 
-// IndentedJSONProcessor creates a new processor for JSON with a specified indentation.
-func IndentedJSONProcessor(indent string) ResponseProcessor {
+// IndentedJSON creates a new processor for JSON with a specified indentation.
+func IndentedJSON(indent string) ResponseProcessor {
 	return &jsonProcessor{false, "", indent, defaultJSONContentType}
 }
 

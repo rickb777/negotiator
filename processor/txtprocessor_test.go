@@ -1,11 +1,10 @@
-package negotiator_test
+package processor_test
 
 import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/rickb777/negotiator"
-
+	"github.com/rickb777/negotiator/processor"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,10 +18,10 @@ func TestTXTShouldProcessAcceptHeader(t *testing.T) {
 		{"text/csv", false},
 	}
 
-	processor := negotiator.TXTProcessor()
+	p := processor.TXT()
 
 	for _, tt := range acceptTests {
-		result := processor.CanProcess(tt.acceptheader, "")
+		result := p.CanProcess(tt.acceptheader, "")
 		assert.Equal(t, tt.expected, result, "Should process "+tt.acceptheader)
 	}
 }
@@ -30,9 +29,9 @@ func TestTXTShouldProcessAcceptHeader(t *testing.T) {
 func TestTXTShouldReturnNoContentIfNil(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	processor := negotiator.TXTProcessor()
+	p := processor.TXT()
 
-	processor.Process(recorder, nil, nil, "")
+	p.Process(recorder, nil, nil, "")
 
 	assert.Equal(t, 204, recorder.Code)
 }
@@ -40,9 +39,9 @@ func TestTXTShouldReturnNoContentIfNil(t *testing.T) {
 func TestTXTShouldSetDefaultContentTypeHeader(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	processor := negotiator.TXTProcessor()
+	p := processor.TXT()
 
-	processor.Process(recorder, nil, "Joe Bloggs", "")
+	p.Process(recorder, nil, "Joe Bloggs", "")
 
 	assert.Equal(t, "text/plain", recorder.HeaderMap.Get("Content-Type"))
 }
@@ -50,9 +49,9 @@ func TestTXTShouldSetDefaultContentTypeHeader(t *testing.T) {
 func TestTXTShouldSetContentTypeHeader(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	processor := negotiator.TXTProcessor().(negotiator.ContentTypeSettable).SetContentType("text/rtf")
+	p := processor.TXT().(processor.ContentTypeSettable).SetContentType("text/rtf")
 
-	processor.Process(recorder, nil, "Joe Bloggs", "")
+	p.Process(recorder, nil, "Joe Bloggs", "")
 
 	assert.Equal(t, "text/rtf", recorder.HeaderMap.Get("Content-Type"))
 }
@@ -67,11 +66,11 @@ func TestTXTShouldSetResponseBody(t *testing.T) {
 		{tm{"Joe Bloggs"}, "Joe Bloggs\n"},
 	}
 
-	processor := negotiator.TXTProcessor()
+	p := processor.TXT()
 
 	for _, m := range models {
 		recorder := httptest.NewRecorder()
-		err := processor.Process(recorder, nil, m.stuff, "")
+		err := p.Process(recorder, nil, m.stuff, "")
 		assert.NoError(t, err)
 		assert.Equal(t, m.expected, recorder.Body.String())
 	}
@@ -80,9 +79,9 @@ func TestTXTShouldSetResponseBody(t *testing.T) {
 func TestTXTShouldReturnErrorOnError(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	processor := negotiator.TXTProcessor()
+	p := processor.TXT()
 
-	err := processor.Process(recorder, nil, make(chan int, 0), "")
+	err := p.Process(recorder, nil, make(chan int, 0), "")
 
 	assert.Error(t, err)
 }

@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/rickb777/negotiator/processor"
+
 	"github.com/rickb777/negotiator/header"
 )
 
@@ -14,7 +16,7 @@ const (
 	xmlHttpRequest = "XMLHttpRequest"
 )
 
-// ErrorHandler is called for NotAcceptable situations.
+// ErrorHandler is called for NotAcceptable and InternalServerError situations.
 type ErrorHandler func(w http.ResponseWriter, error string, code int)
 
 // Printer is something that allows printing log entries. This is only used for diagnostics.
@@ -22,7 +24,7 @@ type Printer func(level byte, message string, data map[string]interface{})
 
 // Negotiator is responsible for content negotiation when using custom response processors.
 type Negotiator struct {
-	processors   []ResponseProcessor
+	processors   []processor.ResponseProcessor
 	errorHandler ErrorHandler
 	logger       Printer
 }
@@ -30,11 +32,11 @@ type Negotiator struct {
 // Default creates a negotiator with all the default processors, supporting
 // JSON, XML, CSV and plain text.
 func Default() *Negotiator {
-	return New(JSONProcessor(), XMLProcessor(), CSVProcessor(), TXTProcessor())
+	return New(processor.JSON(), processor.XML(), processor.CSV(), processor.TXT())
 }
 
 // New creates a Negotiator with a list of custom response processors.
-func New(responseProcessors ...ResponseProcessor) *Negotiator {
+func New(responseProcessors ...processor.ResponseProcessor) *Negotiator {
 	return &Negotiator{
 		processors:   responseProcessors,
 		errorHandler: http.Error,
@@ -43,7 +45,7 @@ func New(responseProcessors ...ResponseProcessor) *Negotiator {
 }
 
 // Processor gets the ith processor.
-func (n *Negotiator) Processor(i int) ResponseProcessor {
+func (n *Negotiator) Processor(i int) processor.ResponseProcessor {
 	return n.processors[i]
 }
 
@@ -56,7 +58,7 @@ func (n *Negotiator) N() int {
 // plus the original processors. The extra processors are inserted first.
 // Because the processors are checked in order, any overlap of matching media range
 // goes to the first such matching processor.
-func (n *Negotiator) Insert(responseProcessors ...ResponseProcessor) *Negotiator {
+func (n *Negotiator) Insert(responseProcessors ...processor.ResponseProcessor) *Negotiator {
 	return &Negotiator{
 		processors:   append(responseProcessors, n.processors...),
 		errorHandler: n.errorHandler,
@@ -68,7 +70,7 @@ func (n *Negotiator) Insert(responseProcessors ...ResponseProcessor) *Negotiator
 // plus the extra processors. The extra processors are appended last.
 // Because the processors are checked in order, any overlap of matching media range
 // goes to the first such matching processor.
-func (n *Negotiator) Append(responseProcessors ...ResponseProcessor) *Negotiator {
+func (n *Negotiator) Append(responseProcessors ...processor.ResponseProcessor) *Negotiator {
 	return &Negotiator{
 		processors:   append(n.processors, responseProcessors...),
 		errorHandler: n.errorHandler,
@@ -77,7 +79,7 @@ func (n *Negotiator) Append(responseProcessors ...ResponseProcessor) *Negotiator
 }
 
 // WithErrorHandler adds a custom error handler. This is used for 406-Not Acceptable cases
-// and dealing with 500-Internal Server Error in MustNegotiate.
+// and dealing with 500-Internal Server Error in Negotiate.
 func (n *Negotiator) WithErrorHandler(eh ErrorHandler) *Negotiator {
 	return &Negotiator{
 		processors:   n.processors,
@@ -95,10 +97,10 @@ func (n *Negotiator) WithLogger(printer Printer) *Negotiator {
 	}
 }
 
-// MustNegotiate negotiates your model based on the HTTP Accept and Accept-... headers.
+// Negotiate negotiates your model based on the HTTP Accept and Accept-... headers.
 // Any error arising will result in a 500 error response and a log message.
-func (n *Negotiator) MustNegotiate(w http.ResponseWriter, req *http.Request, offers ...Offer) {
-	err := n.Negotiate(w, req, offers...)
+func (n *Negotiator) Negotiate(w http.ResponseWriter, req *http.Request, offers ...Offer) {
+	err := n.TryNegotiate(w, req, offers...)
 	if err != nil {
 		n.errorHandler(w, "the server was unable to complete this request", http.StatusInternalServerError)
 		n.logger('E', "500: "+err.Error(),
@@ -111,8 +113,9 @@ func (n *Negotiator) MustNegotiate(w http.ResponseWriter, req *http.Request, off
 	}
 }
 
-// Negotiate your model based on the HTTP Accept and Accept-... headers.
-func (n *Negotiator) Negotiate(w http.ResponseWriter, req *http.Request, offers ...Offer) error {
+// TryNegotiate your model based on the HTTP Accept and Accept-... headers.
+// Usually, it will be sufficient to instead use Negotiate, which deals with error handling.
+func (n *Negotiator) TryNegotiate(w http.ResponseWriter, req *http.Request, offers ...Offer) error {
 	if IsAjax(req) {
 		return n.ajaxNegotiate(w, req, offers...)
 	}
@@ -158,17 +161,17 @@ func (n *Negotiator) negotiate(w http.ResponseWriter, req *http.Request, offers 
 						equalOrWildcard(lang.Value, offer.Language) {
 
 						if accepted.Quality > 0 && lang.Quality > 0 {
-							for _, processor := range n.processors {
-								if processor.CanProcess(offer.MediaType, offer.Language) {
+							for _, p := range n.processors {
+								if p.CanProcess(offer.MediaType, offer.Language) {
 									n.info("200 matched", accepted.Value(), lang.Value, offer)
-									return process(processor, w, req, offer)
+									return process(p, w, req, offer)
 								}
 							}
 
-							for _, processor := range n.processors {
+							for _, p := range n.processors {
 								if accepted.Type == "*" && accepted.Subtype == "*" {
 									n.info("200 matched wildcard", accepted.Value(), lang.Value, offer)
-									return process(processor, w, req, offer)
+									return process(p, w, req, offer)
 								}
 							}
 						} else {
@@ -184,12 +187,12 @@ func (n *Negotiator) negotiate(w http.ResponseWriter, req *http.Request, offers 
 	return n.notAcceptable(w)
 }
 
-func process(processor ResponseProcessor, w http.ResponseWriter, req *http.Request, offer Offer) error {
+func process(p processor.ResponseProcessor, w http.ResponseWriter, req *http.Request, offer Offer) error {
 	if offer.Language != "" {
 		w.Header().Set("Content-Language", offer.Language)
 	}
 	data := dereferenceDataProviders(offer.Data, offer.Language)
-	return processor.Process(w, req, data, offer.Template)
+	return p.Process(w, req, data, offer.Template)
 }
 
 func (n *Negotiator) info(msg, accepted, lang string, offer Offer) {
@@ -207,10 +210,10 @@ func (n *Negotiator) ajaxNegotiate(w http.ResponseWriter, req *http.Request, off
 		if offer.MediaType == "" || offer.MediaType == "application/json" {
 			data := dereferenceDataProviders(offer.Data, "")
 
-			for _, processor := range n.processors {
-				ajax, doesAjax := processor.(AjaxResponseProcessor)
+			for _, p := range n.processors {
+				ajax, doesAjax := p.(processor.AjaxResponseProcessor)
 				if doesAjax && ajax.IsAjaxResponder() {
-					return processor.Process(w, req, data, "")
+					return p.Process(w, req, data, "")
 				}
 			}
 		}

@@ -32,8 +32,10 @@ type Offer struct {
 	Data      interface{}
 }
 
+// Offers is a slice of Offer.
 type Offers []Offer
 
+// MediaTypes gets the media types from the offers, keeping the same order.
 func (offers Offers) MediaTypes() []string {
 	ss := make([]string, len(offers))
 	for i, o := range offers {

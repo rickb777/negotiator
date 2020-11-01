@@ -1,4 +1,4 @@
-package negotiator_test
+package processor_test
 
 import (
 	"errors"
@@ -6,8 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/rickb777/negotiator"
-
+	"github.com/rickb777/negotiator/processor"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -22,10 +21,10 @@ func TestJSONShouldProcessAcceptHeader(t *testing.T) {
 		{"+json", true},
 	}
 
-	processor := negotiator.JSONProcessor()
+	p := processor.JSON()
 
 	for _, tt := range acceptTests {
-		result := processor.CanProcess(tt.acceptheader, "")
+		result := p.CanProcess(tt.acceptheader, "")
 		assert.Equal(t, tt.expected, result, "Should process "+tt.acceptheader)
 	}
 }
@@ -33,17 +32,17 @@ func TestJSONShouldProcessAcceptHeader(t *testing.T) {
 func TestJSONShouldReturnNoContentIfNil(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	processor := negotiator.JSONProcessor()
+	p := processor.JSON()
 
-	processor.Process(recorder, nil, nil, "")
+	p.Process(recorder, nil, nil, "")
 
 	assert.Equal(t, 204, recorder.Code)
 }
 
 func TestJSONShouldHandleAjax(t *testing.T) {
-	processor := negotiator.JSONProcessor()
+	p := processor.JSON()
 
-	assert.True(t, processor.(negotiator.AjaxResponseProcessor).IsAjaxResponder())
+	assert.True(t, p.(processor.AjaxResponseProcessor).IsAjaxResponder())
 }
 
 func TestJSONShouldSetDefaultContentTypeHeader(t *testing.T) {
@@ -55,9 +54,9 @@ func TestJSONShouldSetDefaultContentTypeHeader(t *testing.T) {
 		"Joe Bloggs",
 	}
 
-	processor := negotiator.JSONProcessor()
+	p := processor.JSON()
 
-	processor.Process(recorder, nil, model, "")
+	p.Process(recorder, nil, model, "")
 
 	assert.Equal(t, "application/json", recorder.Header().Get("Content-Type"))
 }
@@ -71,9 +70,9 @@ func TestJSONShouldSetContentTypeHeader(t *testing.T) {
 		"Joe Bloggs",
 	}
 
-	processor := negotiator.JSONProcessor().(negotiator.ContentTypeSettable).SetContentType("application/calendar+json")
+	p := processor.JSON().(processor.ContentTypeSettable).SetContentType("application/calendar+json")
 
-	processor.Process(recorder, nil, model, "")
+	p.Process(recorder, nil, model, "")
 
 	assert.Equal(t, "application/calendar+json", recorder.HeaderMap.Get("Content-Type"))
 }
@@ -87,9 +86,9 @@ func TestJSONShouldSetResponseBody(t *testing.T) {
 		"Joe Bloggs",
 	}
 
-	processor := negotiator.JSONProcessor()
+	p := processor.JSON()
 
-	processor.Process(recorder, nil, model, "")
+	p.Process(recorder, nil, model, "")
 
 	assert.Equal(t, "{\"Name\":\"Joe Bloggs\"}\n", recorder.Body.String())
 }
@@ -103,9 +102,9 @@ func TestJSONShouldSetResponseBodyWithIndentation(t *testing.T) {
 		"Joe Bloggs",
 	}
 
-	processor := negotiator.IndentedJSONProcessor("  ")
+	p := processor.IndentedJSON("  ")
 
-	processor.Process(recorder, nil, model, "")
+	p.Process(recorder, nil, model, "")
 
 	assert.Equal(t, "{\n  \"Name\": \"Joe Bloggs\"\n}\n", recorder.Body.String())
 }
@@ -117,9 +116,9 @@ func TestJSONShouldReturnErrorOnError(t *testing.T) {
 		"Joe Bloggs",
 	}
 
-	processor := negotiator.JSONProcessor()
+	p := processor.JSON()
 
-	err := processor.Process(recorder, nil, model, "")
+	err := p.Process(recorder, nil, model, "")
 
 	assert.Error(t, err)
 }

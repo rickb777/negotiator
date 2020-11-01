@@ -11,13 +11,31 @@ import (
 
 	"github.com/onsi/gomega"
 	"github.com/rickb777/negotiator"
+	"github.com/rickb777/negotiator/processor"
 )
 
-func ExampleNegotiator_MustNegotiate() {
+type User struct {
+	Name string
+}
+
+// Negotiate applies the negotiation algorithm, choosing the response
+// based on the Accept header in the request, if present.
+// It returns either a successful response, a 406-Not Acceptable,
+// or possibly a 500-Internal server error.
+//
+// In this example, there is only one offer and it will be used by whichever
+// response processor matches the request.
+func ExampleNegotiator_Negotiate_singleOffer() {
+	// getUser is a 'standard' handler function
 	getUser := func(w http.ResponseWriter, req *http.Request) {
+		// some data; this will be wrapped in an Offer{}
 		user := &User{Name: "Joe Bloggs"}
-		negotiator.Default().MustNegotiate(w, req, negotiator.Offer{Data: user})
+
+		// the negotiator determines the response format based on the request headers
+		negotiator.Default().Negotiate(w, req, negotiator.Offer{Data: user})
 	}
+
+	// normal handling
 	http.Handle("/user", http.HandlerFunc(getUser))
 }
 
@@ -32,7 +50,7 @@ func Test_should_add_custom_response_processors(t *testing.T) {
 func Test_should_add_custom_response_processors2(t *testing.T) {
 	g := gomega.NewWithT(t)
 	var fakeResponseProcessor = &fakeProcessor{match: "text/test"}
-	n := negotiator.New().Append(negotiator.JSONProcessor(), negotiator.XMLProcessor()).Append(fakeResponseProcessor)
+	n := negotiator.New().Append(processor.JSON(), processor.XML()).Append(fakeResponseProcessor)
 
 	g.Expect(n.N()).To(gomega.Equal(3))
 }
@@ -60,7 +78,7 @@ func Test_should_use_default_processor_if_no_accept_header(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/", nil)
 	recorder := httptest.NewRecorder()
 
-	err := n.Negotiate(recorder, req, negotiator.Offer{Data: "foo"})
+	err := n.TryNegotiate(recorder, req, negotiator.Offer{Data: "foo"})
 
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 	g.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
@@ -76,7 +94,7 @@ func Test_should_give_JSON_response_for_ajax_requests(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
 	model := &ValidXMLUser{Name: "Joe Bloggs"}
-	err := n.Negotiate(recorder, req, negotiator.Offer{Data: model})
+	err := n.TryNegotiate(recorder, req, negotiator.Offer{Data: model})
 
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 	g.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
@@ -95,7 +113,7 @@ func Test_should_return_406_if_no_matching_accept_header(t *testing.T) {
 		req.Header.Add("Accept", "image/png")
 		recorder := httptest.NewRecorder()
 
-		err := n.Negotiate(recorder, req, negotiator.Offer{Data: "foo", MediaType: c})
+		err := n.TryNegotiate(recorder, req, negotiator.Offer{Data: "foo", MediaType: c})
 
 		g.Expect(err).NotTo(gomega.HaveOccurred())
 		g.Expect(recorder.Code).To(gomega.Equal(http.StatusNotAcceptable))
@@ -114,7 +132,7 @@ func Test_should_return_406_when_media_range_is_explicitly_excluded(t *testing.T
 	req.Header.Add("Accept-Language", "en")        // accepted
 	recorder := httptest.NewRecorder()
 
-	err := n.Negotiate(recorder, req, negotiator.Offer{Data: "foo", MediaType: "text/test", Language: "en"})
+	err := n.TryNegotiate(recorder, req, negotiator.Offer{Data: "foo", MediaType: "text/test", Language: "en"})
 
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 	g.Expect(recorder.Code).To(gomega.Equal(http.StatusNotAcceptable))
@@ -132,7 +150,7 @@ func Test_should_return_200_even_when_language_is_explicitly_excluded(t *testing
 	req.Header.Add("Accept-Language", "en;q=0 *") // anything but "en"
 	recorder := httptest.NewRecorder()
 
-	err := n.Negotiate(recorder, req, negotiator.Offer{Data: "foo", MediaType: "text/test", Language: "en"})
+	err := n.TryNegotiate(recorder, req, negotiator.Offer{Data: "foo", MediaType: "text/test", Language: "en"})
 
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 	g.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
@@ -148,7 +166,7 @@ func Test_should_negotiate_and_write_to_response_body(t *testing.T) {
 	req.Header.Add("Accept-Language", "en")
 	recorder := httptest.NewRecorder()
 
-	err := n.Negotiate(recorder, req, negotiator.Offer{Data: "foo", MediaType: "text/test"})
+	err := n.TryNegotiate(recorder, req, negotiator.Offer{Data: "foo", MediaType: "text/test"})
 
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 	g.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
@@ -164,7 +182,7 @@ func Test_should_match_subtype_wildcard(t *testing.T) {
 	req.Header.Add("Accept", "text/*")
 	recorder := httptest.NewRecorder()
 
-	err := n.Negotiate(recorder, req, negotiator.Offer{Data: "foo", MediaType: "text/test"})
+	err := n.TryNegotiate(recorder, req, negotiator.Offer{Data: "foo", MediaType: "text/test"})
 
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 	g.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
@@ -180,7 +198,7 @@ func Test_should_match_language_wildcard_and_send_content_language_header(t *tes
 	req.Header.Add("Accept-Language", "*")
 	recorder := httptest.NewRecorder()
 
-	err := n.Negotiate(recorder, req, negotiator.Offer{Data: "foo", Language: "en"})
+	err := n.TryNegotiate(recorder, req, negotiator.Offer{Data: "foo", Language: "en"})
 
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 	g.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
@@ -197,14 +215,14 @@ func Test_should_negotiate_a_default_processor(t *testing.T) {
 	req.Header.Add("Accept", "*/*")
 
 	recorder := httptest.NewRecorder()
-	err := n.Negotiate(recorder, req, negotiator.Offer{Data: "foo"})
+	err := n.TryNegotiate(recorder, req, negotiator.Offer{Data: "foo"})
 
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 	g.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
 	g.Expect(recorder.Body.String()).To(gomega.Equal("text/test | foo"))
 
 	recorder = httptest.NewRecorder()
-	err = n.Negotiate(recorder, req, negotiator.Offer{Data: "bar", MediaType: "text/test"})
+	err = n.TryNegotiate(recorder, req, negotiator.Offer{Data: "bar", MediaType: "text/test"})
 
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 	g.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
@@ -221,14 +239,14 @@ func Test_should_negotiate_one_of_the_processors(t *testing.T) {
 	req.Header.Add("Accept", "text/a, text/b")
 
 	recorder := httptest.NewRecorder()
-	err := n.Negotiate(recorder, req, negotiator.Offer{Data: "foo", MediaType: "text/a"})
+	err := n.TryNegotiate(recorder, req, negotiator.Offer{Data: "foo", MediaType: "text/a"})
 
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 	g.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
 	g.Expect(recorder.Body.String()).To(gomega.Equal("text/a | foo"))
 
 	recorder = httptest.NewRecorder()
-	err = n.Negotiate(recorder, req, negotiator.Offer{Data: "bar", MediaType: "text/b"})
+	err = n.TryNegotiate(recorder, req, negotiator.Offer{Data: "bar", MediaType: "text/b"})
 
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 	g.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
@@ -259,4 +277,8 @@ func testLogger(t *testing.T) negotiator.Printer {
 		}
 		log.Printf(buf.String())
 	}
+}
+
+type ValidXMLUser struct {
+	Name string
 }

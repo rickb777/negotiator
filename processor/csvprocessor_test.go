@@ -1,11 +1,11 @@
-package negotiator_test
+package processor_test
 
 import (
 	"net/http/httptest"
 	"testing"
 	"time"
 
-	"github.com/rickb777/negotiator"
+	"github.com/rickb777/negotiator/processor"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,10 +19,10 @@ func TestCSVShouldProcessAcceptHeader(t *testing.T) {
 		{"text/plain", false},
 	}
 
-	processor := negotiator.CSVProcessor()
+	p := processor.CSV()
 
 	for _, tt := range acceptTests {
-		result := processor.CanProcess(tt.acceptheader, "")
+		result := p.CanProcess(tt.acceptheader, "")
 		assert.Equal(t, tt.expected, result, "Should process "+tt.acceptheader)
 	}
 }
@@ -30,9 +30,9 @@ func TestCSVShouldProcessAcceptHeader(t *testing.T) {
 func TestCSVShouldReturnNoContentIfNil(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	processor := negotiator.CSVProcessor()
+	p := processor.CSV()
 
-	processor.Process(recorder, nil, nil, "")
+	p.Process(recorder, nil, nil, "")
 
 	assert.Equal(t, 204, recorder.Code)
 }
@@ -40,9 +40,9 @@ func TestCSVShouldReturnNoContentIfNil(t *testing.T) {
 func TestCSVShouldSetDefaultContentTypeHeader(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	processor := negotiator.CSVProcessor()
+	p := processor.CSV()
 
-	processor.Process(recorder, nil, "Joe Bloggs", "")
+	p.Process(recorder, nil, "Joe Bloggs", "")
 
 	assert.Equal(t, "text/csv", recorder.HeaderMap.Get("Content-Type"))
 }
@@ -50,9 +50,9 @@ func TestCSVShouldSetDefaultContentTypeHeader(t *testing.T) {
 func TestCSVShouldSetContentTypeHeader(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	processor := negotiator.CSVProcessor().(negotiator.ContentTypeSettable).SetContentType("text/csv-schema")
+	p := processor.CSV().(processor.ContentTypeSettable).SetContentType("text/csv-schema")
 
-	processor.Process(recorder, nil, "Joe Bloggs", "")
+	p.Process(recorder, nil, "Joe Bloggs", "")
 
 	assert.Equal(t, "text/csv-schema", recorder.HeaderMap.Get("Content-Type"))
 }
@@ -83,11 +83,11 @@ func TestCSVShouldSetResponseBody(t *testing.T) {
 		{[][]*hidden{{{tt(2001, 12, 30)}, {tt(2001, 12, 31)}}}, "(2001-12-30),(2001-12-31)\n"},
 	}
 
-	processor := negotiator.CSVProcessor()
+	p := processor.CSV()
 
 	for _, m := range models {
 		recorder := httptest.NewRecorder()
-		err := processor.Process(recorder, nil, m.stuff, "")
+		err := p.Process(recorder, nil, m.stuff, "")
 		assert.NoError(t, err)
 		assert.Equal(t, m.expected, recorder.Body.String())
 	}
@@ -111,11 +111,11 @@ func TestCSVShouldSetResponseBodyWithTabs(t *testing.T) {
 		{[]Data{{"x", 9, 4, true}, {"y", 7, 1, false}}, "x\t9\t4\ttrue\ny\t7\t1\tfalse\n"},
 	}
 
-	processor := negotiator.CSVProcessor('\t')
+	p := processor.CSV('\t')
 
 	for _, m := range models {
 		recorder := httptest.NewRecorder()
-		err := processor.Process(recorder, nil, m.stuff, "")
+		err := p.Process(recorder, nil, m.stuff, "")
 		assert.NoError(t, err)
 		assert.Equal(t, m.expected, recorder.Body.String())
 	}
@@ -124,9 +124,9 @@ func TestCSVShouldSetResponseBodyWithTabs(t *testing.T) {
 func TestCSVShouldReturnErrorOnError(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	processor := negotiator.CSVProcessor()
+	p := processor.CSV()
 
-	err := processor.Process(recorder, nil, make(chan int, 0), "")
+	err := p.Process(recorder, nil, make(chan int, 0), "")
 
 	assert.Error(t, err)
 }

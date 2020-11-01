@@ -1,4 +1,4 @@
-package negotiator
+package processor
 
 import (
 	"encoding/xml"
@@ -15,13 +15,13 @@ type xmlProcessor struct {
 	contentType    string
 }
 
-// XMLProcessor creates a new processor for XML without indentation.
-func XMLProcessor() ResponseProcessor {
+// XML creates a new processor for XML without indentation.
+func XML() ResponseProcessor {
 	return &xmlProcessor{true, "", "", defaultXMLContentType}
 }
 
-// IndentedXMLProcessor creates a new processor for XML with a specified indentation.
-func IndentedXMLProcessor(index string) ResponseProcessor {
+// IndentedXML creates a new processor for XML with a specified indentation.
+func IndentedXML(index string) ResponseProcessor {
 	return &xmlProcessor{false, "", index, defaultXMLContentType}
 }
 

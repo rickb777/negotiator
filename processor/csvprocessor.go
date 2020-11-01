@@ -1,4 +1,4 @@
-package negotiator
+package processor
 
 import (
 	"encoding/csv"
@@ -15,7 +15,7 @@ type csvProcessor struct {
 	contentType string
 }
 
-// CSVProcessor creates an output processor that serialises a dataModel in CSV form. With no arguments, the default
+// CSV creates an output processor that serialises a dataModel in CSV form. With no arguments, the default
 // format is comma-separated; you can supply any rune to be used as an alternative separator.
 //
 // Model values should be one of the following:
@@ -31,7 +31,7 @@ type csvProcessor struct {
 // * struct for some struct in which all the fields are exported and of simple types (as above).
 //
 // * []struct for some struct in which all the fields are exported and of simple types (as above).
-func CSVProcessor(comma ...rune) ResponseProcessor {
+func CSV(comma ...rune) ResponseProcessor {
 	if len(comma) > 0 {
 		return &csvProcessor{comma[0], defaultCSVContentType}
 	}

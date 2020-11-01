@@ -1,4 +1,4 @@
-package negotiator
+package processor
 
 import (
 	"encoding"
@@ -13,7 +13,7 @@ type txtProcessor struct {
 	contentType string
 }
 
-// TXTProcessor creates an output processor that serialises strings in text/plain form.
+// TXT creates an output processor that serialises strings in text/plain form.
 // Model values should be one of the following:
 //
 // * string
@@ -21,7 +21,7 @@ type txtProcessor struct {
 // * fmt.Stringer
 //
 // * encoding.TextMarshaler
-func TXTProcessor() ResponseProcessor {
+func TXT() ResponseProcessor {
 	return &txtProcessor{defaultTxtContentType}
 }
 

@@ -1,4 +1,4 @@
-package negotiator_test
+package processor_test
 
 import (
 	"encoding/xml"
@@ -7,8 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/rickb777/negotiator"
-
+	"github.com/rickb777/negotiator/processor"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -23,10 +22,10 @@ func TestXMLShouldProcessAcceptHeader(t *testing.T) {
 		{"image/svg+xml", true},
 	}
 
-	processor := negotiator.XMLProcessor()
+	p := processor.XML()
 
 	for _, tt := range acceptTests {
-		result := processor.CanProcess(tt.acceptheader, "")
+		result := p.CanProcess(tt.acceptheader, "")
 		assert.Equal(t, tt.expected, result, "Should process "+tt.acceptheader)
 	}
 }
@@ -34,9 +33,9 @@ func TestXMLShouldProcessAcceptHeader(t *testing.T) {
 func TestXMLShouldReturnNoContentIfNil(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	processor := negotiator.XMLProcessor()
+	p := processor.XML()
 
-	processor.Process(recorder, nil, nil, "")
+	p.Process(recorder, nil, nil, "")
 
 	assert.Equal(t, 204, recorder.Code)
 }
@@ -48,9 +47,9 @@ func TestXMLShouldSetDefaultContentTypeHeader(t *testing.T) {
 		"Joe Bloggs",
 	}
 
-	processor := negotiator.XMLProcessor()
+	p := processor.XML()
 
-	processor.Process(recorder, nil, model, "")
+	p.Process(recorder, nil, model, "")
 
 	assert.Equal(t, "application/xml", recorder.HeaderMap.Get("Content-Type"))
 }
@@ -60,9 +59,9 @@ func TestXMLShouldSetContentTypeHeader(t *testing.T) {
 
 	model := &ValidXMLUser{Name: "Joe Bloggs"}
 
-	processor := negotiator.XMLProcessor().(negotiator.ContentTypeSettable).SetContentType("image/svg+xml")
+	p := processor.XML().(processor.ContentTypeSettable).SetContentType("image/svg+xml")
 
-	processor.Process(recorder, nil, model, "")
+	p.Process(recorder, nil, model, "")
 
 	assert.Equal(t, "image/svg+xml", recorder.HeaderMap.Get("Content-Type"))
 }
@@ -74,9 +73,9 @@ func TestXMLShouldSetResponseBody(t *testing.T) {
 		"Joe Bloggs",
 	}
 
-	processor := negotiator.XMLProcessor()
+	p := processor.XML()
 
-	processor.Process(recorder, nil, model, "")
+	p.Process(recorder, nil, model, "")
 
 	assert.Equal(t, "<ValidXMLUser><Name>Joe Bloggs</Name></ValidXMLUser>", recorder.Body.String())
 }
@@ -86,9 +85,9 @@ func TestXMlShouldSetResponseBodyWithIndentation(t *testing.T) {
 
 	model := &ValidXMLUser{Name: "Joe Bloggs"}
 
-	processor := negotiator.IndentedXMLProcessor("  ")
+	p := processor.IndentedXML("  ")
 
-	processor.Process(recorder, nil, model, "")
+	p.Process(recorder, nil, model, "")
 
 	assert.Equal(t, "<ValidXMLUser>\n  <Name>Joe Bloggs</Name>\n</ValidXMLUser>\n", recorder.Body.String())
 }
@@ -98,9 +97,9 @@ func TestXMLShouldReturnErrorOnError(t *testing.T) {
 
 	model := &XMLUser{Name: "Joe Bloggs"}
 
-	processor := negotiator.IndentedXMLProcessor("  ")
+	p := processor.IndentedXML("  ")
 
-	err := processor.Process(recorder, nil, model, "")
+	err := p.Process(recorder, nil, model, "")
 
 	assert.Error(t, err)
 }

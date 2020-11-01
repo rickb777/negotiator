@@ -1,4 +1,6 @@
-package negotiator
+// package processor defines what a ResponseProcessor is, and provides four standard implementations:
+// JSON, XML, CSV and plain text.
+package processor
 
 import "net/http"
 
