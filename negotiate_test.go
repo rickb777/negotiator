@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gin-gonic/gin"
 	"github.com/onsi/gomega"
 	"github.com/rickb777/negotiator"
 	"github.com/rickb777/negotiator/processor"
@@ -20,7 +21,7 @@ type User struct {
 
 // Negotiate applies the negotiation algorithm, choosing the response
 // based on the Accept header in the request, if present.
-// It returns either a successful response, a 406-Not Acceptable,
+// It returns either a successful response or a 406-Not Acceptable,
 // or possibly a 500-Internal server error.
 //
 // In this example, there is only one offer and it will be used by whichever
@@ -37,6 +38,35 @@ func ExampleNegotiator_Negotiate_singleOffer() {
 
 	// normal handling
 	http.Handle("/user", http.HandlerFunc(getUser))
+}
+
+// Negotiate applies the negotiation algorithm, choosing the response
+// based on the Accept header in the request, if present.
+// It returns either a successful response or a 406-Not Acceptable.
+//
+// In this example, there is only one offer and it will be used by whichever
+// response processor matches the request. The example integrates the negotiator
+// seamlessly with Gin using the Context.Render method.
+func ExampleNegotiator_Render_singleOffer() {
+	// create and configure Gin engine, e.g.
+	engine := gin.Default()
+
+	// getUser is a 'standard' handler function
+	getUser := func(c *gin.Context) {
+		// some data; this will be wrapped in an Offer{}
+		user := &User{Name: "Joe Bloggs"}
+
+		// the negotiator determines the response format based on the request headers
+		// returning a CodedRender value
+		cr := negotiator.Default().Render(c.Request, negotiator.Offer{Data: user})
+
+		// pass the negotiation result to Gin; the status code will be one of
+		// 200-OK, 204-No content, or 406-Not acceptable
+		c.Render(cr.StatusCode(), cr)
+	}
+
+	// normal handling
+	engine.GET("/user", getUser)
 }
 
 func Test_should_add_custom_response_processors(t *testing.T) {

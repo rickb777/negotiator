@@ -28,37 +28,12 @@ func TestCSVShouldProcessAcceptHeader(t *testing.T) {
 	}
 }
 
-func TestCSVShouldReturnNoContentIfNil(t *testing.T) {
-	g := NewGomegaWithT(t)
-	recorder := httptest.NewRecorder()
-
-	p := processor.CSV()
-
-	p.Process(recorder, nil, "")
-
-	g.Expect(recorder.Code).To(Equal(204))
-}
-
-func TestCSVShouldSetDefaultContentTypeHeader(t *testing.T) {
-	g := NewGomegaWithT(t)
-	recorder := httptest.NewRecorder()
-
-	p := processor.CSV()
-
-	p.Process(recorder, "Joe Bloggs", "")
-
-	g.Expect(recorder.Header().Get("Content-Type")).To(Equal("text/csv"))
-}
-
 func TestCSVShouldSetContentTypeHeader(t *testing.T) {
 	g := NewGomegaWithT(t)
-	recorder := httptest.NewRecorder()
 
-	p := processor.CSV().(processor.ContentTypeSettable).SetContentType("text/csv-schema")
+	p := processor.CSV().(processor.ContentTypeSettable).WithContentType("text/csv-schema")
 
-	p.Process(recorder, "Joe Bloggs", "")
-
-	g.Expect(recorder.Header().Get("Content-Type")).To(Equal("text/csv-schema"))
+	g.Expect(p.ContentType()).To(Equal("text/csv-schema"))
 }
 
 func tt(y, m, d int) time.Time {

@@ -31,17 +31,6 @@ func TestJSONShouldProcessAcceptHeader(t *testing.T) {
 	}
 }
 
-func TestJSONShouldReturnNoContentIfNil(t *testing.T) {
-	g := NewGomegaWithT(t)
-	recorder := httptest.NewRecorder()
-
-	p := processor.JSON()
-
-	p.Process(recorder, nil, "")
-
-	g.Expect(recorder.Code).To(Equal(204))
-}
-
 func TestJSONShouldHandleAjax(t *testing.T) {
 	g := NewGomegaWithT(t)
 
@@ -50,38 +39,12 @@ func TestJSONShouldHandleAjax(t *testing.T) {
 	g.Expect(p.(processor.AjaxResponseProcessor).IsAjaxResponder()).To(BeTrue())
 }
 
-func TestJSONShouldSetDefaultContentTypeHeader(t *testing.T) {
-	g := NewGomegaWithT(t)
-	recorder := httptest.NewRecorder()
-
-	model := struct {
-		Name string
-	}{
-		"Joe Bloggs",
-	}
-
-	p := processor.JSON()
-
-	p.Process(recorder, model, "")
-
-	g.Expect(recorder.Header().Get("Content-Type")).To(Equal("application/json"))
-}
-
 func TestJSONShouldSetContentTypeHeader(t *testing.T) {
 	g := NewGomegaWithT(t)
-	recorder := httptest.NewRecorder()
 
-	model := struct {
-		Name string
-	}{
-		"Joe Bloggs",
-	}
+	p := processor.JSON().(processor.ContentTypeSettable).WithContentType("application/foo")
 
-	p := processor.JSON().(processor.ContentTypeSettable).SetContentType("application/calendar+json")
-
-	p.Process(recorder, model, "")
-
-	g.Expect(recorder.Header().Get("Content-Type")).To(Equal("application/calendar+json"))
+	g.Expect(p.ContentType()).To(Equal("application/foo"))
 }
 
 func TestJSONShouldSetResponseBody(t *testing.T) {

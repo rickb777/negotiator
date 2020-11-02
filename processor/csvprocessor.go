@@ -42,8 +42,8 @@ func (p *csvProcessor) ContentType() string {
 	return p.contentType
 }
 
-// SetContentType implements ContentTypeSettable for this type.
-func (p *csvProcessor) SetContentType(contentType string) ResponseProcessor {
+// WithContentType implements ContentTypeSettable for this type.
+func (p *csvProcessor) WithContentType(contentType string) ResponseProcessor {
 	p.contentType = contentType
 	return p
 }
@@ -53,20 +53,14 @@ func (*csvProcessor) CanProcess(mediaRange string, lang string) bool {
 }
 
 func (p *csvProcessor) Process(w http.ResponseWriter, dataModel interface{}, _ string) error {
-	if dataModel == nil {
-		w.WriteHeader(http.StatusNoContent)
-		return nil
-	}
-
-	w.Header().Set("Content-Type", p.contentType)
 	writer := csv.NewWriter(w)
 	writer.Comma = p.comma
 	return p.flush(writer, p.process(writer, dataModel))
 }
 
-func debug(msg string, args ...interface{}) {
-	//fmt.Printf(msg, args...)
-}
+var debug = func(msg string, args ...interface{}) {}
+
+//var debug = fmt.Printf
 
 func (p *csvProcessor) process(writer *csv.Writer, dataModel interface{}) error {
 	debug("csvProcessor.process %T\n", dataModel)

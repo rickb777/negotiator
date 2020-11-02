@@ -29,8 +29,8 @@ func (p *txtProcessor) ContentType() string {
 	return p.contentType
 }
 
-// SetContentType implements ContentTypeSettable for this type.
-func (p *txtProcessor) SetContentType(contentType string) ResponseProcessor {
+// WithContentType implements ContentTypeSettable for this type.
+func (p *txtProcessor) WithContentType(contentType string) ResponseProcessor {
 	p.contentType = contentType
 	return p
 }
@@ -40,26 +40,14 @@ func (*txtProcessor) CanProcess(mediaRange string, lang string) bool {
 }
 
 func (p *txtProcessor) Process(w http.ResponseWriter, dataModel interface{}, _ string) error {
-	if dataModel == nil {
-		w.WriteHeader(http.StatusNoContent)
-		return nil
-	}
-
-	w.Header().Set("Content-Type", p.contentType)
-	return p.process(w, dataModel)
-}
-
-func (p *txtProcessor) process(w http.ResponseWriter, dataModel interface{}) error {
 	s, ok := dataModel.(string)
 	if ok {
-		writeWithNewline(w, []byte(s))
-		return nil
+		return WriteWithNewline(w, []byte(s))
 	}
 
 	st, ok := dataModel.(fmt.Stringer)
 	if ok {
-		writeWithNewline(w, []byte(st.String()))
-		return nil
+		return WriteWithNewline(w, []byte(st.String()))
 	}
 
 	tm, ok := dataModel.(encoding.TextMarshaler)
@@ -68,8 +56,7 @@ func (p *txtProcessor) process(w http.ResponseWriter, dataModel interface{}) err
 		if err != nil {
 			return err
 		}
-		writeWithNewline(w, b)
-		return nil
+		return WriteWithNewline(w, b)
 	}
 
 	return fmt.Errorf("Unsupported type for TXT: %T", dataModel)

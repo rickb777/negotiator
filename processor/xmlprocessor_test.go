@@ -31,43 +31,12 @@ func TestXMLShouldProcessAcceptHeader(t *testing.T) {
 	}
 }
 
-func TestXMLShouldReturnNoContentIfNil(t *testing.T) {
-	g := NewGomegaWithT(t)
-	recorder := httptest.NewRecorder()
-
-	p := processor.XML()
-
-	p.Process(recorder, nil, "")
-
-	g.Expect(recorder.Code).To(Equal(204))
-}
-
-func TestXMLShouldSetDefaultContentTypeHeader(t *testing.T) {
-	g := NewGomegaWithT(t)
-	recorder := httptest.NewRecorder()
-
-	model := &ValidXMLUser{
-		"Joe Bloggs",
-	}
-
-	p := processor.XML()
-
-	p.Process(recorder, model, "")
-
-	g.Expect(recorder.Header().Get("Content-Type")).To(Equal("application/xml"))
-}
-
 func TestXMLShouldSetContentTypeHeader(t *testing.T) {
 	g := NewGomegaWithT(t)
-	recorder := httptest.NewRecorder()
 
-	model := &ValidXMLUser{Name: "Joe Bloggs"}
+	p := processor.XML().(processor.ContentTypeSettable).WithContentType("application/my+xml")
 
-	p := processor.XML().(processor.ContentTypeSettable).SetContentType("image/svg+xml")
-
-	p.Process(recorder, model, "")
-
-	g.Expect(recorder.Header().Get("Content-Type")).To(Equal("image/svg+xml"))
+	g.Expect(p.ContentType()).To(Equal("application/my+xml"))
 }
 
 func TestXMLShouldSetResponseBody(t *testing.T) {

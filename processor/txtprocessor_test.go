@@ -27,37 +27,12 @@ func TestTXTShouldProcessAcceptHeader(t *testing.T) {
 	}
 }
 
-func TestTXTShouldReturnNoContentIfNil(t *testing.T) {
-	g := NewGomegaWithT(t)
-	recorder := httptest.NewRecorder()
-
-	p := processor.TXT()
-
-	p.Process(recorder, nil, "")
-
-	g.Expect(recorder.Code).To(Equal(204))
-}
-
-func TestTXTShouldSetDefaultContentTypeHeader(t *testing.T) {
-	g := NewGomegaWithT(t)
-	recorder := httptest.NewRecorder()
-
-	p := processor.TXT()
-
-	p.Process(recorder, "Joe Bloggs", "")
-
-	g.Expect(recorder.Header().Get("Content-Type")).To(Equal("text/plain"))
-}
-
 func TestTXTShouldSetContentTypeHeader(t *testing.T) {
 	g := NewGomegaWithT(t)
-	recorder := httptest.NewRecorder()
 
-	p := processor.TXT().(processor.ContentTypeSettable).SetContentType("text/rtf")
+	p := processor.TXT().(processor.ContentTypeSettable).WithContentType("text/foo")
 
-	p.Process(recorder, "Joe Bloggs", "")
-
-	g.Expect(recorder.Header().Get("Content-Type")).To(Equal("text/rtf"))
+	g.Expect(p.ContentType()).To(Equal("text/foo"))
 }
 
 func TestTXTShouldSetResponseBody(t *testing.T) {

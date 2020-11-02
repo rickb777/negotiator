@@ -29,8 +29,8 @@ func (p *xmlProcessor) ContentType() string {
 	return p.contentType
 }
 
-// SetContentType implements ContentTypeSettable for this type.
-func (p *xmlProcessor) SetContentType(contentType string) ResponseProcessor {
+// WithContentType implements ContentTypeSettable for this type.
+func (p *xmlProcessor) WithContentType(contentType string) ResponseProcessor {
 	p.contentType = contentType
 	return p
 }
@@ -40,12 +40,6 @@ func (*xmlProcessor) CanProcess(mediaRange string, lang string) bool {
 }
 
 func (p *xmlProcessor) Process(w http.ResponseWriter, dataModel interface{}, _ string) error {
-	if dataModel == nil {
-		w.WriteHeader(http.StatusNoContent)
-		return nil
-	}
-
-	w.Header().Set("Content-Type", p.contentType)
 	if p.dense {
 		return xml.NewEncoder(w).Encode(dataModel)
 	}
@@ -55,15 +49,20 @@ func (p *xmlProcessor) Process(w http.ResponseWriter, dataModel interface{}, _ s
 		return err
 	}
 
-	return writeWithNewline(w, x)
+	return WriteWithNewline(w, x)
 }
 
-func writeWithNewline(w io.Writer, x []byte) error {
+// WriteWithNewline is a helper function that writes some bytes to a Writer. If the
+// byte slice is empty or if the last byte is *not* newline, an extra newline is
+// also written, as required for HTTP responses.
+func WriteWithNewline(w io.Writer, x []byte) error {
 	_, err := w.Write(x)
 	if err != nil {
 		return err
 	}
 
-	_, err = w.Write([]byte{'\n'})
+	if len(x) == 0 || x[len(x)-1] != '\n' {
+		_, err = w.Write([]byte{'\n'})
+	}
 	return err
 }

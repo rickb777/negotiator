@@ -117,14 +117,15 @@ func (n *Negotiator) Negotiate(w http.ResponseWriter, req *http.Request, offers 
 // TryNegotiate your model based on the HTTP Accept and Accept-... headers.
 // Usually, it will be sufficient to instead use Negotiate, which deals with error handling.
 func (n *Negotiator) TryNegotiate(w http.ResponseWriter, req *http.Request, offers ...Offer) error {
-	r := n.Render(w, req, Offers(offers).setDefaultWildcards())
+	r := n.Render(req, Offers(offers).setDefaultWildcards()...)
+	w.WriteHeader(r.StatusCode())
 	r.WriteContentType(w)
 	return r.Render(w)
 }
 
 // Render computes the best matching response, if there is one, and returns a suitable renderer
 // that is compatible with Gin (github.com/gin-gonic/gin).
-func (n *Negotiator) Render(w http.ResponseWriter, req *http.Request, offers Offers) Render {
+func (n *Negotiator) Render(req *http.Request, offers ...Offer) CodedRender {
 	if IsAjax(req) {
 		return n.ajaxNegotiate(offers)
 	}
@@ -192,9 +193,14 @@ func (n *Negotiator) Render(w http.ResponseWriter, req *http.Request, offers Off
 	return unacceptable{n.errorHandler}
 }
 
-func process(p processor.ResponseProcessor, offer Offer) Render {
+func process(p processor.ResponseProcessor, offer Offer) CodedRender {
+	data := dereferenceDataProviders(offer.Data, offer.Language)
+	if data == nil {
+		return emptyCode(http.StatusNoContent)
+	}
+
 	return &renderer{
-		data:     dereferenceDataProviders(offer.Data, offer.Language),
+		data:     data,
 		language: offer.Language,
 		template: offer.Template,
 		p:        p,
@@ -211,15 +217,16 @@ func (n *Negotiator) info(msg, accepted, lang string, offer Offer) {
 		})
 }
 
-func (n *Negotiator) ajaxNegotiate(offers Offers) Render {
+func (n *Negotiator) ajaxNegotiate(offers Offers) CodedRender {
 	for _, offer := range offers {
 		if offer.MediaType == "*/*" || offer.MediaType == "application/*" || offer.MediaType == "application/json" {
 			data := dereferenceDataProviders(offer.Data, "")
-
-			for _, p := range n.processors {
-				ajax, doesAjax := p.(processor.AjaxResponseProcessor)
-				if doesAjax && ajax.IsAjaxResponder() {
-					return &renderer{data: data, p: p}
+			if data != nil {
+				for _, p := range n.processors {
+					ajax, doesAjax := p.(processor.AjaxResponseProcessor)
+					if doesAjax && ajax.IsAjaxResponder() {
+						return &renderer{data: data, p: p}
+					}
 				}
 			}
 		}

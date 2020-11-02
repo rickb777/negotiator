@@ -16,6 +16,11 @@ type Render interface {
 	WriteContentType(w http.ResponseWriter)
 }
 
+type CodedRender interface {
+	Render
+	StatusCode() int
+}
+
 //-------------------------------------------------------------------------------------------------
 
 type renderer struct {
@@ -25,7 +30,10 @@ type renderer struct {
 	p        processor.ResponseProcessor
 }
 
-// WriteContentType writes custom ContentType.
+func (r renderer) StatusCode() int {
+	return http.StatusOK
+}
+
 func (r *renderer) WriteContentType(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", r.p.ContentType())
 	if r.language != "" {
@@ -33,7 +41,6 @@ func (r *renderer) WriteContentType(w http.ResponseWriter) {
 	}
 }
 
-// Render writes data with custom ContentType.
 func (r *renderer) Render(w http.ResponseWriter) error {
 	return r.p.Process(w, r.data, r.template)
 }
@@ -44,13 +51,31 @@ type unacceptable struct {
 	errorHandler ErrorHandler
 }
 
-// WriteContentType writes custom ContentType.
+func (r unacceptable) StatusCode() int {
+	return http.StatusNotAcceptable
+}
+
 func (r unacceptable) WriteContentType(w http.ResponseWriter) {
 	// does nothing
 }
 
-// Render writes data with custom ContentType.
 func (r unacceptable) Render(w http.ResponseWriter) error {
 	r.errorHandler(w, "the accepted formats are not offered by the server", http.StatusNotAcceptable)
+	return nil
+}
+
+//-------------------------------------------------------------------------------------------------
+
+type emptyCode int
+
+func (r emptyCode) StatusCode() int {
+	return int(r)
+}
+
+func (r emptyCode) WriteContentType(w http.ResponseWriter) {
+	// does nothing
+}
+
+func (r emptyCode) Render(w http.ResponseWriter) error {
 	return nil
 }

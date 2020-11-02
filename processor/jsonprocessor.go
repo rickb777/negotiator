@@ -28,8 +28,8 @@ func (p *jsonProcessor) ContentType() string {
 	return p.contentType
 }
 
-// SetContentType implements ContentTypeSettable for this type.
-func (p *jsonProcessor) SetContentType(contentType string) ResponseProcessor {
+// WithContentType implements ContentTypeSettable for this type.
+func (p *jsonProcessor) WithContentType(contentType string) ResponseProcessor {
 	p.contentType = contentType
 	return p
 }
@@ -46,12 +46,6 @@ func (*jsonProcessor) CanProcess(mediaRange string, lang string) bool {
 }
 
 func (p *jsonProcessor) Process(w http.ResponseWriter, dataModel interface{}, _ string) error {
-	if dataModel == nil {
-		w.WriteHeader(http.StatusNoContent)
-		return nil
-	}
-
-	w.Header().Set("Content-Type", p.contentType)
 	if p.dense {
 		return json.NewEncoder(w).Encode(dataModel)
 	}
@@ -62,5 +56,5 @@ func (p *jsonProcessor) Process(w http.ResponseWriter, dataModel interface{}, _ 
 		return err
 	}
 
-	return writeWithNewline(w, js)
+	return WriteWithNewline(w, js)
 }
