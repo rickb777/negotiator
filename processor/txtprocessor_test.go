@@ -4,11 +4,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	. "github.com/onsi/gomega"
 	"github.com/rickb777/negotiator/processor"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestTXTShouldProcessAcceptHeader(t *testing.T) {
+	g := NewGomegaWithT(t)
 	var acceptTests = []struct {
 		acceptheader string
 		expected     bool
@@ -22,41 +23,45 @@ func TestTXTShouldProcessAcceptHeader(t *testing.T) {
 
 	for _, tt := range acceptTests {
 		result := p.CanProcess(tt.acceptheader, "")
-		assert.Equal(t, tt.expected, result, "Should process "+tt.acceptheader)
+		g.Expect(result).To(Equal(tt.expected), "Should process "+tt.acceptheader)
 	}
 }
 
 func TestTXTShouldReturnNoContentIfNil(t *testing.T) {
+	g := NewGomegaWithT(t)
 	recorder := httptest.NewRecorder()
 
 	p := processor.TXT()
 
 	p.Process(recorder, nil, "")
 
-	assert.Equal(t, 204, recorder.Code)
+	g.Expect(recorder.Code).To(Equal(204))
 }
 
 func TestTXTShouldSetDefaultContentTypeHeader(t *testing.T) {
+	g := NewGomegaWithT(t)
 	recorder := httptest.NewRecorder()
 
 	p := processor.TXT()
 
 	p.Process(recorder, "Joe Bloggs", "")
 
-	assert.Equal(t, "text/plain", recorder.HeaderMap.Get("Content-Type"))
+	g.Expect(recorder.Header().Get("Content-Type")).To(Equal("text/plain"))
 }
 
 func TestTXTShouldSetContentTypeHeader(t *testing.T) {
+	g := NewGomegaWithT(t)
 	recorder := httptest.NewRecorder()
 
 	p := processor.TXT().(processor.ContentTypeSettable).SetContentType("text/rtf")
 
 	p.Process(recorder, "Joe Bloggs", "")
 
-	assert.Equal(t, "text/rtf", recorder.HeaderMap.Get("Content-Type"))
+	g.Expect(recorder.Header().Get("Content-Type")).To(Equal("text/rtf"))
 }
 
 func TestTXTShouldSetResponseBody(t *testing.T) {
+	g := NewGomegaWithT(t)
 	models := []struct {
 		stuff    interface{}
 		expected string
@@ -71,19 +76,20 @@ func TestTXTShouldSetResponseBody(t *testing.T) {
 	for _, m := range models {
 		recorder := httptest.NewRecorder()
 		err := p.Process(recorder, m.stuff, "")
-		assert.NoError(t, err)
-		assert.Equal(t, m.expected, recorder.Body.String())
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(recorder.Body.String()).To(Equal(m.expected))
 	}
 }
 
 func TestTXTShouldReturnErrorOnError(t *testing.T) {
+	g := NewGomegaWithT(t)
 	recorder := httptest.NewRecorder()
 
 	p := processor.TXT()
 
 	err := p.Process(recorder, make(chan int, 0), "")
 
-	assert.Error(t, err)
+	g.Expect(err).To(HaveOccurred())
 }
 
 type tm struct {

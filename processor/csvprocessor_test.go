@@ -5,11 +5,12 @@ import (
 	"testing"
 	"time"
 
+	. "github.com/onsi/gomega"
 	"github.com/rickb777/negotiator/processor"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestCSVShouldProcessAcceptHeader(t *testing.T) {
+	g := NewGomegaWithT(t)
 	var acceptTests = []struct {
 		acceptheader string
 		expected     bool
@@ -23,38 +24,41 @@ func TestCSVShouldProcessAcceptHeader(t *testing.T) {
 
 	for _, tt := range acceptTests {
 		result := p.CanProcess(tt.acceptheader, "")
-		assert.Equal(t, tt.expected, result, "Should process "+tt.acceptheader)
+		g.Expect(result).To(Equal(tt.expected), "Should process "+tt.acceptheader)
 	}
 }
 
 func TestCSVShouldReturnNoContentIfNil(t *testing.T) {
+	g := NewGomegaWithT(t)
 	recorder := httptest.NewRecorder()
 
 	p := processor.CSV()
 
 	p.Process(recorder, nil, "")
 
-	assert.Equal(t, 204, recorder.Code)
+	g.Expect(recorder.Code).To(Equal(204))
 }
 
 func TestCSVShouldSetDefaultContentTypeHeader(t *testing.T) {
+	g := NewGomegaWithT(t)
 	recorder := httptest.NewRecorder()
 
 	p := processor.CSV()
 
 	p.Process(recorder, "Joe Bloggs", "")
 
-	assert.Equal(t, "text/csv", recorder.HeaderMap.Get("Content-Type"))
+	g.Expect(recorder.Header().Get("Content-Type")).To(Equal("text/csv"))
 }
 
 func TestCSVShouldSetContentTypeHeader(t *testing.T) {
+	g := NewGomegaWithT(t)
 	recorder := httptest.NewRecorder()
 
 	p := processor.CSV().(processor.ContentTypeSettable).SetContentType("text/csv-schema")
 
 	p.Process(recorder, "Joe Bloggs", "")
 
-	assert.Equal(t, "text/csv-schema", recorder.HeaderMap.Get("Content-Type"))
+	g.Expect(recorder.Header().Get("Content-Type")).To(Equal("text/csv-schema"))
 }
 
 func tt(y, m, d int) time.Time {
@@ -62,6 +66,7 @@ func tt(y, m, d int) time.Time {
 }
 
 func TestCSVShouldSetResponseBody(t *testing.T) {
+	g := NewGomegaWithT(t)
 	models := []struct {
 		stuff    interface{}
 		expected string
@@ -88,12 +93,13 @@ func TestCSVShouldSetResponseBody(t *testing.T) {
 	for _, m := range models {
 		recorder := httptest.NewRecorder()
 		err := p.Process(recorder, m.stuff, "")
-		assert.NoError(t, err)
-		assert.Equal(t, m.expected, recorder.Body.String())
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(recorder.Body.String()).To(Equal(m.expected))
 	}
 }
 
 func TestCSVShouldSetResponseBodyWithTabs(t *testing.T) {
+	g := NewGomegaWithT(t)
 	models := []struct {
 		stuff    interface{}
 		expected string
@@ -116,19 +122,20 @@ func TestCSVShouldSetResponseBodyWithTabs(t *testing.T) {
 	for _, m := range models {
 		recorder := httptest.NewRecorder()
 		err := p.Process(recorder, m.stuff, "")
-		assert.NoError(t, err)
-		assert.Equal(t, m.expected, recorder.Body.String())
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(recorder.Body.String()).To(Equal(m.expected))
 	}
 }
 
 func TestCSVShouldReturnErrorOnError(t *testing.T) {
+	g := NewGomegaWithT(t)
 	recorder := httptest.NewRecorder()
 
 	p := processor.CSV()
 
 	err := p.Process(recorder, make(chan int, 0), "")
 
-	assert.Error(t, err)
+	g.Expect(err).To(HaveOccurred())
 }
 
 type Data struct {

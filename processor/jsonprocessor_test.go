@@ -6,11 +6,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	. "github.com/onsi/gomega"
 	"github.com/rickb777/negotiator/processor"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestJSONShouldProcessAcceptHeader(t *testing.T) {
+	g := NewGomegaWithT(t)
 	var acceptTests = []struct {
 		acceptheader string
 		expected     bool
@@ -25,27 +26,32 @@ func TestJSONShouldProcessAcceptHeader(t *testing.T) {
 
 	for _, tt := range acceptTests {
 		result := p.CanProcess(tt.acceptheader, "")
-		assert.Equal(t, tt.expected, result, "Should process "+tt.acceptheader)
+
+		g.Expect(result).To(Equal(tt.expected), "Should process "+tt.acceptheader)
 	}
 }
 
 func TestJSONShouldReturnNoContentIfNil(t *testing.T) {
+	g := NewGomegaWithT(t)
 	recorder := httptest.NewRecorder()
 
 	p := processor.JSON()
 
 	p.Process(recorder, nil, "")
 
-	assert.Equal(t, 204, recorder.Code)
+	g.Expect(recorder.Code).To(Equal(204))
 }
 
 func TestJSONShouldHandleAjax(t *testing.T) {
+	g := NewGomegaWithT(t)
+
 	p := processor.JSON()
 
-	assert.True(t, p.(processor.AjaxResponseProcessor).IsAjaxResponder())
+	g.Expect(p.(processor.AjaxResponseProcessor).IsAjaxResponder()).To(BeTrue())
 }
 
 func TestJSONShouldSetDefaultContentTypeHeader(t *testing.T) {
+	g := NewGomegaWithT(t)
 	recorder := httptest.NewRecorder()
 
 	model := struct {
@@ -58,10 +64,11 @@ func TestJSONShouldSetDefaultContentTypeHeader(t *testing.T) {
 
 	p.Process(recorder, model, "")
 
-	assert.Equal(t, "application/json", recorder.Header().Get("Content-Type"))
+	g.Expect(recorder.Header().Get("Content-Type")).To(Equal("application/json"))
 }
 
 func TestJSONShouldSetContentTypeHeader(t *testing.T) {
+	g := NewGomegaWithT(t)
 	recorder := httptest.NewRecorder()
 
 	model := struct {
@@ -74,10 +81,11 @@ func TestJSONShouldSetContentTypeHeader(t *testing.T) {
 
 	p.Process(recorder, model, "")
 
-	assert.Equal(t, "application/calendar+json", recorder.HeaderMap.Get("Content-Type"))
+	g.Expect(recorder.Header().Get("Content-Type")).To(Equal("application/calendar+json"))
 }
 
 func TestJSONShouldSetResponseBody(t *testing.T) {
+	g := NewGomegaWithT(t)
 	recorder := httptest.NewRecorder()
 
 	model := struct {
@@ -90,10 +98,11 @@ func TestJSONShouldSetResponseBody(t *testing.T) {
 
 	p.Process(recorder, model, "")
 
-	assert.Equal(t, "{\"Name\":\"Joe Bloggs\"}\n", recorder.Body.String())
+	g.Expect(recorder.Body.String()).To(Equal("{\"Name\":\"Joe Bloggs\"}\n"))
 }
 
 func TestJSONShouldSetResponseBodyWithIndentation(t *testing.T) {
+	g := NewGomegaWithT(t)
 	recorder := httptest.NewRecorder()
 
 	model := struct {
@@ -106,10 +115,11 @@ func TestJSONShouldSetResponseBodyWithIndentation(t *testing.T) {
 
 	p.Process(recorder, model, "")
 
-	assert.Equal(t, "{\n  \"Name\": \"Joe Bloggs\"\n}\n", recorder.Body.String())
+	g.Expect(recorder.Body.String()).To(Equal("{\n  \"Name\": \"Joe Bloggs\"\n}\n"))
 }
 
 func TestJSONShouldReturnErrorOnError(t *testing.T) {
+	g := NewGomegaWithT(t)
 	recorder := httptest.NewRecorder()
 
 	model := &User{
@@ -120,7 +130,7 @@ func TestJSONShouldReturnErrorOnError(t *testing.T) {
 
 	err := p.Process(recorder, model, "")
 
-	assert.Error(t, err)
+	g.Expect(err).To(HaveOccurred())
 }
 
 type User struct {

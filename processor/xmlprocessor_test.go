@@ -7,11 +7,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	. "github.com/onsi/gomega"
 	"github.com/rickb777/negotiator/processor"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestXMLShouldProcessAcceptHeader(t *testing.T) {
+	g := NewGomegaWithT(t)
 	var acceptTests = []struct {
 		acceptheader string
 		expected     bool
@@ -26,21 +27,23 @@ func TestXMLShouldProcessAcceptHeader(t *testing.T) {
 
 	for _, tt := range acceptTests {
 		result := p.CanProcess(tt.acceptheader, "")
-		assert.Equal(t, tt.expected, result, "Should process "+tt.acceptheader)
+		g.Expect(result).To(Equal(tt.expected), "Should process "+tt.acceptheader)
 	}
 }
 
 func TestXMLShouldReturnNoContentIfNil(t *testing.T) {
+	g := NewGomegaWithT(t)
 	recorder := httptest.NewRecorder()
 
 	p := processor.XML()
 
 	p.Process(recorder, nil, "")
 
-	assert.Equal(t, 204, recorder.Code)
+	g.Expect(recorder.Code).To(Equal(204))
 }
 
 func TestXMLShouldSetDefaultContentTypeHeader(t *testing.T) {
+	g := NewGomegaWithT(t)
 	recorder := httptest.NewRecorder()
 
 	model := &ValidXMLUser{
@@ -51,10 +54,11 @@ func TestXMLShouldSetDefaultContentTypeHeader(t *testing.T) {
 
 	p.Process(recorder, model, "")
 
-	assert.Equal(t, "application/xml", recorder.HeaderMap.Get("Content-Type"))
+	g.Expect(recorder.Header().Get("Content-Type")).To(Equal("application/xml"))
 }
 
 func TestXMLShouldSetContentTypeHeader(t *testing.T) {
+	g := NewGomegaWithT(t)
 	recorder := httptest.NewRecorder()
 
 	model := &ValidXMLUser{Name: "Joe Bloggs"}
@@ -63,10 +67,11 @@ func TestXMLShouldSetContentTypeHeader(t *testing.T) {
 
 	p.Process(recorder, model, "")
 
-	assert.Equal(t, "image/svg+xml", recorder.HeaderMap.Get("Content-Type"))
+	g.Expect(recorder.Header().Get("Content-Type")).To(Equal("image/svg+xml"))
 }
 
 func TestXMLShouldSetResponseBody(t *testing.T) {
+	g := NewGomegaWithT(t)
 	recorder := httptest.NewRecorder()
 
 	model := &ValidXMLUser{
@@ -77,10 +82,11 @@ func TestXMLShouldSetResponseBody(t *testing.T) {
 
 	p.Process(recorder, model, "")
 
-	assert.Equal(t, "<ValidXMLUser><Name>Joe Bloggs</Name></ValidXMLUser>", recorder.Body.String())
+	g.Expect(recorder.Body.String()).To(Equal("<ValidXMLUser><Name>Joe Bloggs</Name></ValidXMLUser>"))
 }
 
 func TestXMlShouldSetResponseBodyWithIndentation(t *testing.T) {
+	g := NewGomegaWithT(t)
 	recorder := httptest.NewRecorder()
 
 	model := &ValidXMLUser{Name: "Joe Bloggs"}
@@ -89,10 +95,11 @@ func TestXMlShouldSetResponseBodyWithIndentation(t *testing.T) {
 
 	p.Process(recorder, model, "")
 
-	assert.Equal(t, "<ValidXMLUser>\n  <Name>Joe Bloggs</Name>\n</ValidXMLUser>\n", recorder.Body.String())
+	g.Expect(recorder.Body.String()).To(Equal("<ValidXMLUser>\n  <Name>Joe Bloggs</Name>\n</ValidXMLUser>\n"))
 }
 
 func TestXMLShouldReturnErrorOnError(t *testing.T) {
+	g := NewGomegaWithT(t)
 	recorder := httptest.NewRecorder()
 
 	model := &XMLUser{Name: "Joe Bloggs"}
@@ -101,7 +108,7 @@ func TestXMLShouldReturnErrorOnError(t *testing.T) {
 
 	err := p.Process(recorder, model, "")
 
-	assert.Error(t, err)
+	g.Expect(err).To(HaveOccurred())
 }
 
 type ValidXMLUser struct {
