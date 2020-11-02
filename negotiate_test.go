@@ -101,6 +101,20 @@ func Test_should_give_JSON_response_for_ajax_requests(t *testing.T) {
 	g.Expect(recorder.Body.String()).To(gomega.Equal("{\"Name\":\"Joe Bloggs\"}\n"))
 }
 
+func Test_should_give_406_for_unmatched_ajax_requests(t *testing.T) {
+	g := gomega.NewWithT(t)
+	n := negotiator.Default().WithLogger(testLogger(t))
+
+	req, _ := http.NewRequest("GET", "/", nil)
+	req.Header.Add(negotiator.XRequestedWith, negotiator.XMLHttpRequest)
+	recorder := httptest.NewRecorder()
+
+	err := n.TryNegotiate(recorder, req, negotiator.Offer{Data: "foo", MediaType: "text/plain"})
+
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+	g.Expect(recorder.Code).To(gomega.Equal(http.StatusNotAcceptable))
+}
+
 func Test_should_return_406_if_no_matching_accept_header(t *testing.T) {
 	g := gomega.NewWithT(t)
 	var fakeResponseProcessor = &fakeProcessor{match: "text/test"}
@@ -259,11 +273,15 @@ type fakeProcessor struct {
 	match string
 }
 
+func (p *fakeProcessor) ContentType() string {
+	return p.match
+}
+
 func (p *fakeProcessor) CanProcess(mediaRange string, lang string) bool {
 	return mediaRange == p.match && (lang == "*" || lang == "en")
 }
 
-func (p *fakeProcessor) Process(w http.ResponseWriter, req *http.Request, model interface{}, _ string) error {
+func (p *fakeProcessor) Process(w http.ResponseWriter, model interface{}, _ string) error {
 	w.Write([]byte(fmt.Sprintf("%s | %v", p.match, model)))
 	return nil
 }

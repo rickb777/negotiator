@@ -6,9 +6,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/rickb777/negotiator/processor"
-
 	"github.com/rickb777/negotiator/header"
+	"github.com/rickb777/negotiator/processor"
 )
 
 const (
@@ -97,6 +96,8 @@ func (n *Negotiator) WithLogger(printer Printer) *Negotiator {
 	}
 }
 
+//-------------------------------------------------------------------------------------------------
+
 // Negotiate negotiates your model based on the HTTP Accept and Accept-... headers.
 // Any error arising will result in a 500 error response and a log message.
 func (n *Negotiator) Negotiate(w http.ResponseWriter, req *http.Request, offers ...Offer) {
@@ -116,18 +117,22 @@ func (n *Negotiator) Negotiate(w http.ResponseWriter, req *http.Request, offers 
 // TryNegotiate your model based on the HTTP Accept and Accept-... headers.
 // Usually, it will be sufficient to instead use Negotiate, which deals with error handling.
 func (n *Negotiator) TryNegotiate(w http.ResponseWriter, req *http.Request, offers ...Offer) error {
+	r := n.Render(w, req, Offers(offers).setDefaultWildcards())
+	r.WriteContentType(w)
+	return r.Render(w)
+}
+
+// Render computes the best matching response, if there is one, and returns a suitable renderer
+// that is compatible with Gin (github.com/gin-gonic/gin).
+func (n *Negotiator) Render(w http.ResponseWriter, req *http.Request, offers Offers) Render {
 	if IsAjax(req) {
-		return n.ajaxNegotiate(w, req, offers...)
+		return n.ajaxNegotiate(offers)
 	}
 
 	if len(n.processors) == 0 {
-		return n.notAcceptable(w)
+		return unacceptable{n.errorHandler}
 	}
 
-	return n.negotiate(w, req, Offers(offers).setDefaultWildcards())
-}
-
-func (n *Negotiator) negotiate(w http.ResponseWriter, req *http.Request, offers Offers) error {
 	mrs := header.ParseMediaRanges(req.Header.Get(Accept)).WithDefault()
 	languages := header.Parse(req.Header.Get(AcceptLanguage)).WithDefault()
 
@@ -164,19 +169,19 @@ func (n *Negotiator) negotiate(w http.ResponseWriter, req *http.Request, offers 
 							for _, p := range n.processors {
 								if p.CanProcess(offer.MediaType, offer.Language) {
 									n.info("200 matched", accepted.Value(), lang.Value, offer)
-									return process(p, w, req, offer)
+									return process(p, offer)
 								}
 							}
 
 							for _, p := range n.processors {
 								if accepted.Type == "*" && accepted.Subtype == "*" {
 									n.info("200 matched wildcard", accepted.Value(), lang.Value, offer)
-									return process(p, w, req, offer)
+									return process(p, offer)
 								}
 							}
 						} else {
 							// content matched but is explicitly excluded, so stop checking other matches
-							return n.notAcceptable(w)
+							return unacceptable{n.errorHandler}
 						}
 					}
 				}
@@ -184,15 +189,16 @@ func (n *Negotiator) negotiate(w http.ResponseWriter, req *http.Request, offers 
 		}
 	}
 
-	return n.notAcceptable(w)
+	return unacceptable{n.errorHandler}
 }
 
-func process(p processor.ResponseProcessor, w http.ResponseWriter, req *http.Request, offer Offer) error {
-	if offer.Language != "" {
-		w.Header().Set("Content-Language", offer.Language)
+func process(p processor.ResponseProcessor, offer Offer) Render {
+	return &renderer{
+		data:     dereferenceDataProviders(offer.Data, offer.Language),
+		language: offer.Language,
+		template: offer.Template,
+		p:        p,
 	}
-	data := dereferenceDataProviders(offer.Data, offer.Language)
-	return p.Process(w, req, data, offer.Template)
 }
 
 func (n *Negotiator) info(msg, accepted, lang string, offer Offer) {
@@ -205,31 +211,26 @@ func (n *Negotiator) info(msg, accepted, lang string, offer Offer) {
 		})
 }
 
-func (n *Negotiator) ajaxNegotiate(w http.ResponseWriter, req *http.Request, offers ...Offer) error {
+func (n *Negotiator) ajaxNegotiate(offers Offers) Render {
 	for _, offer := range offers {
-		if offer.MediaType == "" || offer.MediaType == "application/json" {
+		if offer.MediaType == "*/*" || offer.MediaType == "application/*" || offer.MediaType == "application/json" {
 			data := dereferenceDataProviders(offer.Data, "")
 
 			for _, p := range n.processors {
 				ajax, doesAjax := p.(processor.AjaxResponseProcessor)
 				if doesAjax && ajax.IsAjaxResponder() {
-					return p.Process(w, req, data, "")
+					return &renderer{data: data, p: p}
 				}
 			}
 		}
 	}
 
-	return n.notAcceptable(w)
+	return unacceptable{n.errorHandler}
 }
 
 // IsAjax tests whether a request has the Ajax header sent by browsers for XHR requests.
 func IsAjax(req *http.Request) bool {
 	return req.Header.Get(XRequestedWith) == XMLHttpRequest
-}
-
-func (n *Negotiator) notAcceptable(w http.ResponseWriter) error {
-	n.errorHandler(w, "the accepted formats are not offered by the server", http.StatusNotAcceptable)
-	return nil
 }
 
 func equalOrWildcard(accepted, offered string) bool {

@@ -34,7 +34,7 @@ func TestJSONShouldReturnNoContentIfNil(t *testing.T) {
 
 	p := processor.JSON()
 
-	p.Process(recorder, nil, nil, "")
+	p.Process(recorder, nil, "")
 
 	assert.Equal(t, 204, recorder.Code)
 }
@@ -56,7 +56,7 @@ func TestJSONShouldSetDefaultContentTypeHeader(t *testing.T) {
 
 	p := processor.JSON()
 
-	p.Process(recorder, nil, model, "")
+	p.Process(recorder, model, "")
 
 	assert.Equal(t, "application/json", recorder.Header().Get("Content-Type"))
 }
@@ -72,7 +72,7 @@ func TestJSONShouldSetContentTypeHeader(t *testing.T) {
 
 	p := processor.JSON().(processor.ContentTypeSettable).SetContentType("application/calendar+json")
 
-	p.Process(recorder, nil, model, "")
+	p.Process(recorder, model, "")
 
 	assert.Equal(t, "application/calendar+json", recorder.HeaderMap.Get("Content-Type"))
 }
@@ -88,7 +88,7 @@ func TestJSONShouldSetResponseBody(t *testing.T) {
 
 	p := processor.JSON()
 
-	p.Process(recorder, nil, model, "")
+	p.Process(recorder, model, "")
 
 	assert.Equal(t, "{\"Name\":\"Joe Bloggs\"}\n", recorder.Body.String())
 }
@@ -104,7 +104,7 @@ func TestJSONShouldSetResponseBodyWithIndentation(t *testing.T) {
 
 	p := processor.IndentedJSON("  ")
 
-	p.Process(recorder, nil, model, "")
+	p.Process(recorder, model, "")
 
 	assert.Equal(t, "{\n  \"Name\": \"Joe Bloggs\"\n}\n", recorder.Body.String())
 }
@@ -118,7 +118,7 @@ func TestJSONShouldReturnErrorOnError(t *testing.T) {
 
 	p := processor.JSON()
 
-	err := p.Process(recorder, nil, model, "")
+	err := p.Process(recorder, model, "")
 
 	assert.Error(t, err)
 }

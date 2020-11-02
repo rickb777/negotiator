@@ -24,6 +24,10 @@ func IndentedJSON(indent string) ResponseProcessor {
 	return &jsonProcessor{false, "", indent, defaultJSONContentType}
 }
 
+func (p *jsonProcessor) ContentType() string {
+	return p.contentType
+}
+
 // SetContentType implements ContentTypeSettable for this type.
 func (p *jsonProcessor) SetContentType(contentType string) ResponseProcessor {
 	p.contentType = contentType
@@ -41,7 +45,7 @@ func (*jsonProcessor) CanProcess(mediaRange string, lang string) bool {
 		strings.HasSuffix(mediaRange, "+json")
 }
 
-func (p *jsonProcessor) Process(w http.ResponseWriter, req *http.Request, dataModel interface{}, _ string) error {
+func (p *jsonProcessor) Process(w http.ResponseWriter, dataModel interface{}, _ string) error {
 	if dataModel == nil {
 		w.WriteHeader(http.StatusNoContent)
 		return nil

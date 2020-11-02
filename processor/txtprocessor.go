@@ -25,6 +25,10 @@ func TXT() ResponseProcessor {
 	return &txtProcessor{defaultTxtContentType}
 }
 
+func (p *txtProcessor) ContentType() string {
+	return p.contentType
+}
+
 // SetContentType implements ContentTypeSettable for this type.
 func (p *txtProcessor) SetContentType(contentType string) ResponseProcessor {
 	p.contentType = contentType
@@ -35,7 +39,7 @@ func (*txtProcessor) CanProcess(mediaRange string, lang string) bool {
 	return strings.EqualFold(mediaRange, "text/plain") || strings.EqualFold(mediaRange, "text/*")
 }
 
-func (p *txtProcessor) Process(w http.ResponseWriter, req *http.Request, dataModel interface{}, _ string) error {
+func (p *txtProcessor) Process(w http.ResponseWriter, dataModel interface{}, _ string) error {
 	if dataModel == nil {
 		w.WriteHeader(http.StatusNoContent)
 		return nil
