@@ -28,40 +28,12 @@ type Negotiator struct {
 	logger       Printer
 }
 
-// Default creates a negotiator with all the default processors, supporting
-// JSON, XML, CSV and plain text.
-func Default() *Negotiator {
-	return New(processor.JSON(), processor.XML(), processor.CSV(), processor.TXT())
-}
-
 // New creates a Negotiator with a list of custom response processors.
 func New(responseProcessors ...processor.ResponseProcessor) *Negotiator {
 	return &Negotiator{
 		processors:   responseProcessors,
 		errorHandler: http.Error,
 		logger:       func(_ byte, _ string, _ map[string]interface{}) {},
-	}
-}
-
-// Processor gets the ith processor.
-func (n *Negotiator) Processor(i int) processor.ResponseProcessor {
-	return n.processors[i]
-}
-
-// N returns the number of processors.
-func (n *Negotiator) N() int {
-	return len(n.processors)
-}
-
-// Insert more response processors. A new Negotiator is returned with the extra processors
-// plus the original processors. The extra processors are inserted first.
-// Because the processors are checked in order, any overlap of matching media range
-// goes to the first such matching processor.
-func (n *Negotiator) Insert(responseProcessors ...processor.ResponseProcessor) *Negotiator {
-	return &Negotiator{
-		processors:   append(responseProcessors, n.processors...),
-		errorHandler: n.errorHandler,
-		logger:       n.logger,
 	}
 }
 
@@ -72,6 +44,15 @@ func (n *Negotiator) Insert(responseProcessors ...processor.ResponseProcessor) *
 func (n *Negotiator) Append(responseProcessors ...processor.ResponseProcessor) *Negotiator {
 	return &Negotiator{
 		processors:   append(n.processors, responseProcessors...),
+		errorHandler: n.errorHandler,
+		logger:       n.logger,
+	}
+}
+
+// WithDefaults adds the default processors JSON, XML, CSV and TXT.
+func (n *Negotiator) WithDefaults() *Negotiator {
+	return &Negotiator{
+		processors:   append(n.processors, processor.JSON(), processor.XML(), processor.CSV(), processor.TXT()),
 		errorHandler: n.errorHandler,
 		logger:       n.logger,
 	}
@@ -94,6 +75,16 @@ func (n *Negotiator) WithLogger(printer Printer) *Negotiator {
 		errorHandler: n.errorHandler,
 		logger:       printer,
 	}
+}
+
+// Processor gets the ith processor.
+func (n *Negotiator) Processor(i int) processor.ResponseProcessor {
+	return n.processors[i]
+}
+
+// N returns the number of processors.
+func (n *Negotiator) N() int {
+	return len(n.processors)
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -33,7 +33,7 @@ func ExampleNegotiator_Negotiate_singleOffer() {
 		user := &User{Name: "Joe Bloggs"}
 
 		// the negotiator determines the response format based on the request headers
-		negotiator.Default().Negotiate(w, req, negotiator.Offer{Data: user})
+		negotiator.New().WithDefaults().Negotiate(w, req, negotiator.Offer{Data: user})
 	}
 
 	// normal handling
@@ -58,7 +58,7 @@ func ExampleNegotiator_Render_singleOffer() {
 
 		// the negotiator determines the response format based on the request headers
 		// returning a CodedRender value
-		cr := negotiator.Default().Render(c.Request, negotiator.Offer{Data: user})
+		cr := negotiator.New().WithDefaults().Render(c.Request, negotiator.Offer{Data: user})
 
 		// pass the negotiation result to Gin; the status code will be one of
 		// 200-OK, 204-No content, or 406-Not acceptable
@@ -72,26 +72,22 @@ func ExampleNegotiator_Render_singleOffer() {
 func Test_should_add_custom_response_processors(t *testing.T) {
 	g := gomega.NewWithT(t)
 	var fakeResponseProcessor = &fakeProcessor{match: "text/test"}
-	n := negotiator.Default().Insert(fakeResponseProcessor)
-
-	g.Expect(n.N()).To(gomega.Equal(5))
-}
-
-func Test_should_add_custom_response_processors2(t *testing.T) {
-	g := gomega.NewWithT(t)
-	var fakeResponseProcessor = &fakeProcessor{match: "text/test"}
 	n := negotiator.New().Append(processor.JSON(), processor.XML()).Append(fakeResponseProcessor)
 
+	lastProcessor := n.Processor(n.N() - 1)
+	processorName := reflect.TypeOf(lastProcessor).String()
+
 	g.Expect(n.N()).To(gomega.Equal(3))
+	g.Expect(processorName).To(gomega.Equal("*negotiator_test.fakeProcessor"))
 }
 
-func Test_should_add_custom_response_processors_to_beginning(t *testing.T) {
+func Test_should_add_custom_response_processors_to_end(t *testing.T) {
 	g := gomega.NewWithT(t)
 	var fakeResponseProcessor = &fakeProcessor{match: "text/test"}
-	n := negotiator.Default().Insert(fakeResponseProcessor)
+	n := negotiator.New().WithDefaults().Append(fakeResponseProcessor)
 
-	firstProcessor := n.Processor(0)
-	processorName := reflect.TypeOf(firstProcessor).String()
+	lastProcessor := n.Processor(n.N() - 1)
+	processorName := reflect.TypeOf(lastProcessor).String()
 
 	g.Expect(n.N()).To(gomega.Equal(5))
 	g.Expect(processorName).To(gomega.Equal("*negotiator_test.fakeProcessor"))
@@ -117,7 +113,7 @@ func Test_should_use_default_processor_if_no_accept_header(t *testing.T) {
 
 func Test_should_give_JSON_response_for_ajax_requests(t *testing.T) {
 	g := gomega.NewWithT(t)
-	n := negotiator.Default().WithLogger(testLogger(t))
+	n := negotiator.New().WithDefaults().WithLogger(testLogger(t))
 
 	req, _ := http.NewRequest("GET", "/", nil)
 	req.Header.Add(negotiator.XRequestedWith, negotiator.XMLHttpRequest)
@@ -133,7 +129,7 @@ func Test_should_give_JSON_response_for_ajax_requests(t *testing.T) {
 
 func Test_should_give_406_for_unmatched_ajax_requests(t *testing.T) {
 	g := gomega.NewWithT(t)
-	n := negotiator.Default().WithLogger(testLogger(t))
+	n := negotiator.New().WithDefaults().WithLogger(testLogger(t))
 
 	req, _ := http.NewRequest("GET", "/", nil)
 	req.Header.Add(negotiator.XRequestedWith, negotiator.XMLHttpRequest)
