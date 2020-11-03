@@ -49,7 +49,7 @@ func TestXMLShouldSetResponseBody(t *testing.T) {
 
 	p := processor.XML()
 
-	p.Process(recorder, model, "")
+	p.Process(recorder, "", model)
 
 	g.Expect(recorder.Body.String()).To(Equal("<ValidXMLUser><Name>Joe Bloggs</Name></ValidXMLUser>"))
 }
@@ -62,7 +62,7 @@ func TestXMlShouldSetResponseBodyWithIndentation(t *testing.T) {
 
 	p := processor.IndentedXML("  ")
 
-	p.Process(recorder, model, "")
+	p.Process(recorder, "", model)
 
 	g.Expect(recorder.Body.String()).To(Equal("<ValidXMLUser>\n  <Name>Joe Bloggs</Name>\n</ValidXMLUser>\n"))
 }
@@ -75,7 +75,7 @@ func TestXMLShouldReturnErrorOnError(t *testing.T) {
 
 	p := processor.IndentedXML("  ")
 
-	err := p.Process(recorder, model, "")
+	err := p.Process(recorder, "", model)
 
 	g.Expect(err).To(HaveOccurred())
 }

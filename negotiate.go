@@ -117,7 +117,7 @@ func (n *Negotiator) Negotiate(w http.ResponseWriter, req *http.Request, offers 
 // TryNegotiate your model based on the HTTP Accept and Accept-... headers.
 // Usually, it will be sufficient to instead use Negotiate, which deals with error handling.
 func (n *Negotiator) TryNegotiate(w http.ResponseWriter, req *http.Request, offers ...Offer) error {
-	r := n.Render(req, Offers(offers).setDefaultWildcards()...)
+	r := n.Render(req, offers...)
 	w.WriteHeader(r.StatusCode())
 	r.WriteContentType(w)
 	return r.Render(w)
@@ -126,6 +126,8 @@ func (n *Negotiator) TryNegotiate(w http.ResponseWriter, req *http.Request, offe
 // Render computes the best matching response, if there is one, and returns a suitable renderer
 // that is compatible with Gin (github.com/gin-gonic/gin).
 func (n *Negotiator) Render(req *http.Request, offers ...Offer) CodedRender {
+	offers = Offers(offers).setDefaultWildcards()
+
 	if IsAjax(req) {
 		return n.ajaxNegotiate(offers)
 	}
@@ -139,19 +141,7 @@ func (n *Negotiator) Render(req *http.Request, offers ...Offer) CodedRender {
 
 	// first pass - remove offers that match exclusions
 	// (this doesn't apply to language exclusions because we always allow at least one language match)
-	excluded := make([]bool, len(offers))
-	for i, offer := range offers {
-		offeredType, offeredSubtype := split(offer.MediaType, '/')
-
-		for _, accepted := range mrs {
-			if accepted.Quality <= 0 &&
-				accepted.Type == offeredType &&
-				accepted.Subtype == offeredSubtype {
-
-				excluded[i] = true
-			}
-		}
-	}
+	excluded := findExcludedOffers(offers, mrs)
 
 	// second pass - find the first matching media-range and language combination
 	for i, offer := range offers {
@@ -191,6 +181,23 @@ func (n *Negotiator) Render(req *http.Request, offers ...Offer) CodedRender {
 	}
 
 	return unacceptable{n.errorHandler}
+}
+
+func findExcludedOffers(offers []Offer, mrs header.MediaRanges) []bool {
+	excluded := make([]bool, len(offers))
+	for i, offer := range offers {
+		offeredType, offeredSubtype := split(offer.MediaType, '/')
+
+		for _, accepted := range mrs {
+			if accepted.Quality <= 0 &&
+				accepted.Type == offeredType &&
+				accepted.Subtype == offeredSubtype {
+
+				excluded[i] = true
+			}
+		}
+	}
+	return excluded
 }
 
 func process(p processor.ResponseProcessor, offer Offer) CodedRender {

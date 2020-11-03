@@ -52,7 +52,7 @@ func (*csvProcessor) CanProcess(mediaRange string, lang string) bool {
 	return strings.EqualFold(mediaRange, "text/csv") || strings.EqualFold(mediaRange, "text/*")
 }
 
-func (p *csvProcessor) Process(w http.ResponseWriter, dataModel interface{}, _ string) error {
+func (p *csvProcessor) Process(w http.ResponseWriter, _ string, dataModel interface{}) error {
 	writer := csv.NewWriter(w)
 	writer.Comma = p.comma
 	return p.flush(writer, p.process(writer, dataModel))

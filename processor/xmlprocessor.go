@@ -39,7 +39,7 @@ func (*xmlProcessor) CanProcess(mediaRange string, lang string) bool {
 	return strings.Contains(mediaRange, "/xml") || strings.HasSuffix(mediaRange, "+xml")
 }
 
-func (p *xmlProcessor) Process(w http.ResponseWriter, dataModel interface{}, _ string) error {
+func (p *xmlProcessor) Process(w http.ResponseWriter, _ string, dataModel interface{}) error {
 	if p.dense {
 		return xml.NewEncoder(w).Encode(dataModel)
 	}

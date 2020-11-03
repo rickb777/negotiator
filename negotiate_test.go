@@ -311,8 +311,8 @@ func (p *fakeProcessor) CanProcess(mediaRange string, lang string) bool {
 	return mediaRange == p.match && (lang == "*" || lang == "en")
 }
 
-func (p *fakeProcessor) Process(w http.ResponseWriter, model interface{}, _ string) error {
-	w.Write([]byte(fmt.Sprintf("%s | %v", p.match, model)))
+func (p *fakeProcessor) Process(w http.ResponseWriter, _ string, data interface{}) error {
+	w.Write([]byte(fmt.Sprintf("%s | %v", p.match, data)))
 	return nil
 }
 

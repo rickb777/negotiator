@@ -45,7 +45,7 @@ func (*jsonProcessor) CanProcess(mediaRange string, lang string) bool {
 		strings.HasSuffix(mediaRange, "+json")
 }
 
-func (p *jsonProcessor) Process(w http.ResponseWriter, dataModel interface{}, _ string) error {
+func (p *jsonProcessor) Process(w http.ResponseWriter, _ string, dataModel interface{}) error {
 	if p.dense {
 		return json.NewEncoder(w).Encode(dataModel)
 	}

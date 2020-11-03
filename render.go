@@ -42,7 +42,7 @@ func (r *renderer) WriteContentType(w http.ResponseWriter) {
 }
 
 func (r *renderer) Render(w http.ResponseWriter) error {
-	return r.p.Process(w, r.data, r.template)
+	return r.p.Process(w, r.template, r.data)
 }
 
 //-------------------------------------------------------------------------------------------------

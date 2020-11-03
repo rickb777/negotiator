@@ -59,7 +59,7 @@ func TestJSONShouldSetResponseBody(t *testing.T) {
 
 	p := processor.JSON()
 
-	p.Process(recorder, model, "")
+	p.Process(recorder, "", model)
 
 	g.Expect(recorder.Body.String()).To(Equal("{\"Name\":\"Joe Bloggs\"}\n"))
 }
@@ -76,7 +76,7 @@ func TestJSONShouldSetResponseBodyWithIndentation(t *testing.T) {
 
 	p := processor.IndentedJSON("  ")
 
-	p.Process(recorder, model, "")
+	p.Process(recorder, "", model)
 
 	g.Expect(recorder.Body.String()).To(Equal("{\n  \"Name\": \"Joe Bloggs\"\n}\n"))
 }
@@ -91,7 +91,7 @@ func TestJSONShouldReturnErrorOnError(t *testing.T) {
 
 	p := processor.JSON()
 
-	err := p.Process(recorder, model, "")
+	err := p.Process(recorder, "", model)
 
 	g.Expect(err).To(HaveOccurred())
 }

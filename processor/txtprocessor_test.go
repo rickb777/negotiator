@@ -50,7 +50,7 @@ func TestTXTShouldSetResponseBody(t *testing.T) {
 
 	for _, m := range models {
 		recorder := httptest.NewRecorder()
-		err := p.Process(recorder, m.stuff, "")
+		err := p.Process(recorder, "", m.stuff)
 		g.Expect(err).NotTo(HaveOccurred())
 		g.Expect(recorder.Body.String()).To(Equal(m.expected))
 	}
@@ -62,7 +62,7 @@ func TestTXTShouldReturnErrorOnError(t *testing.T) {
 
 	p := processor.TXT()
 
-	err := p.Process(recorder, make(chan int, 0), "")
+	err := p.Process(recorder, "", make(chan int, 0))
 
 	g.Expect(err).To(HaveOccurred())
 }

@@ -10,7 +10,7 @@ type ResponseProcessor interface {
 	// will handle a given request.
 	CanProcess(mediaRange string, lang string) bool
 	// Process renders the data model to the response writer, without setting any headers.
-	Process(w http.ResponseWriter, dataModel interface{}, template string) error
+	Process(w http.ResponseWriter, template string, dataModel interface{}) error
 	ContentType() string
 }
 
