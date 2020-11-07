@@ -199,10 +199,11 @@ func process(p processor.ResponseProcessor, offer Offer) CodedRender {
 	}
 
 	return &renderer{
-		data:     data,
-		language: offer.Language,
-		template: offer.Template,
-		p:        p,
+		data:        data,
+		language:    offer.Language,
+		template:    offer.Template,
+		contentType: p.ContentType(),
+		process:     p.Process,
 	}
 }
 
@@ -219,13 +220,13 @@ func (n *Negotiator) info(msg, accepted, lang string, offer Offer) {
 func (n *Negotiator) ajaxNegotiate(offers Offers) CodedRender {
 	for _, offer := range offers {
 		if offer.MediaType == "*/*" || offer.MediaType == "application/*" || offer.MediaType == "application/json" {
-			data := dereferenceDataProviders(offer.Data, "")
+			data := dereferenceDataProviders(offer.Data, offer.Language)
 			if data != nil {
-				for _, p := range n.processors {
-					ajax, doesAjax := p.(processor.AjaxResponseProcessor)
-					if doesAjax && ajax.IsAjaxResponder() {
-						return &renderer{data: data, p: p}
-					}
+				return &renderer{
+					data:        data,
+					language:    offer.Language,
+					contentType: "application/json; charset=utf-8",
+					process:     processor.RenderJSON(""),
 				}
 			}
 		}

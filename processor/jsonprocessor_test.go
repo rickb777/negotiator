@@ -31,14 +31,6 @@ func TestJSONShouldProcessAcceptHeader(t *testing.T) {
 	}
 }
 
-func TestJSONShouldHandleAjax(t *testing.T) {
-	g := NewGomegaWithT(t)
-
-	p := processor.JSON()
-
-	g.Expect(p.(processor.AjaxResponseProcessor).IsAjaxResponder()).To(BeTrue())
-}
-
 func TestJSONShouldSetContentTypeHeader(t *testing.T) {
 	g := NewGomegaWithT(t)
 
@@ -47,7 +39,7 @@ func TestJSONShouldSetContentTypeHeader(t *testing.T) {
 	g.Expect(p.ContentType()).To(Equal("application/foo"))
 }
 
-func TestJSONShouldSetResponseBody(t *testing.T) {
+func TestJSONShouldWriteResponseBody(t *testing.T) {
 	g := NewGomegaWithT(t)
 	recorder := httptest.NewRecorder()
 
@@ -59,12 +51,13 @@ func TestJSONShouldSetResponseBody(t *testing.T) {
 
 	p := processor.JSON()
 
-	p.Process(recorder, "", model)
+	err := p.Process(recorder, "", model)
 
+	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(recorder.Body.String()).To(Equal("{\"Name\":\"Joe Bloggs\"}\n"))
 }
 
-func TestJSONShouldSetResponseBodyWithIndentation(t *testing.T) {
+func TestJSONShouldWriteResponseBodyIndented(t *testing.T) {
 	g := NewGomegaWithT(t)
 	recorder := httptest.NewRecorder()
 
@@ -74,10 +67,11 @@ func TestJSONShouldSetResponseBodyWithIndentation(t *testing.T) {
 		"Joe Bloggs",
 	}
 
-	p := processor.IndentedJSON("  ")
+	p := processor.JSON("  ")
 
-	p.Process(recorder, "", model)
+	err := p.Process(recorder, "", model)
 
+	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(recorder.Body.String()).To(Equal("{\n  \"Name\": \"Joe Bloggs\"\n}\n"))
 }
 

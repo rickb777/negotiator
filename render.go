@@ -2,8 +2,6 @@ package negotiator
 
 import (
 	"net/http"
-
-	"github.com/rickb777/negotiator/processor"
 )
 
 // Render defines the interface for content renderers.
@@ -24,10 +22,11 @@ type CodedRender interface {
 //-------------------------------------------------------------------------------------------------
 
 type renderer struct {
-	data     interface{}
-	language string
-	template string
-	p        processor.ResponseProcessor
+	data        interface{}
+	language    string
+	template    string
+	contentType string
+	process     func(w http.ResponseWriter, template string, dataModel interface{}) error
 }
 
 func (r renderer) StatusCode() int {
@@ -35,14 +34,14 @@ func (r renderer) StatusCode() int {
 }
 
 func (r *renderer) WriteContentType(w http.ResponseWriter) {
-	w.Header().Set("Content-Type", r.p.ContentType())
+	w.Header().Set("Content-Type", r.contentType)
 	if r.language != "" {
 		w.Header().Set("Content-Language", r.language)
 	}
 }
 
 func (r *renderer) Render(w http.ResponseWriter) error {
-	return r.p.Process(w, r.template, r.data)
+	return r.process(w, r.template, r.data)
 }
 
 //-------------------------------------------------------------------------------------------------

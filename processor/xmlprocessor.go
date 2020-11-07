@@ -10,19 +10,18 @@ import (
 const defaultXMLContentType = "application/xml"
 
 type xmlProcessor struct {
-	dense          bool
-	prefix, indent string
-	contentType    string
+	indent      string
+	contentType string
 }
 
 // XML creates a new processor for XML without indentation.
 func XML() ResponseProcessor {
-	return &xmlProcessor{true, "", "", defaultXMLContentType}
+	return &xmlProcessor{contentType: defaultXMLContentType}
 }
 
 // IndentedXML creates a new processor for XML with a specified indentation.
 func IndentedXML(index string) ResponseProcessor {
-	return &xmlProcessor{false, "", index, defaultXMLContentType}
+	return &xmlProcessor{indent: index, contentType: defaultXMLContentType}
 }
 
 func (p *xmlProcessor) ContentType() string {
@@ -40,11 +39,11 @@ func (*xmlProcessor) CanProcess(mediaRange string, lang string) bool {
 }
 
 func (p *xmlProcessor) Process(w http.ResponseWriter, _ string, dataModel interface{}) error {
-	if p.dense {
+	if p.indent == "" {
 		return xml.NewEncoder(w).Encode(dataModel)
 	}
 
-	x, err := xml.MarshalIndent(dataModel, p.prefix, p.indent)
+	x, err := xml.MarshalIndent(dataModel, "", p.indent)
 	if err != nil {
 		return err
 	}
