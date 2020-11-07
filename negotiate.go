@@ -28,7 +28,8 @@ type Negotiator struct {
 	logger       Printer
 }
 
-// New creates a Negotiator with a list of custom response processors.
+// New creates a Negotiator with a list of custom response processors. The error handler
+// invokes http.Error and the diagnostic printer is no-op; change these if required.
 func New(responseProcessors ...processor.ResponseProcessor) *Negotiator {
 	return &Negotiator{
 		processors:   responseProcessors,
