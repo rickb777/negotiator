@@ -50,21 +50,23 @@ func TestTXTShouldSetResponseBody(t *testing.T) {
 
 	for _, m := range models {
 		recorder := httptest.NewRecorder()
-		err := p.Process(recorder, "", m.stuff)
-		g.Expect(err).NotTo(HaveOccurred())
+		p.Process(recorder, "", m.stuff)
 		g.Expect(recorder.Body.String()).To(Equal(m.expected))
 	}
 }
 
-func TestTXTShouldReturnErrorOnError(t *testing.T) {
-	g := NewGomegaWithT(t)
+func TestTXTShouldPanicOnError(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
 	p := processor.TXT()
 
-	err := p.Process(recorder, "", make(chan int, 0))
+	defer func() {
+		recover()
+	}()
 
-	g.Expect(err).To(HaveOccurred())
+	p.Process(recorder, "", make(chan int, 0))
+
+	t.Error("should not reach here")
 }
 
 type tm struct {

@@ -67,17 +67,20 @@ func TestXMlShouldSetResponseBodyWithIndentation(t *testing.T) {
 	g.Expect(recorder.Body.String()).To(Equal("<ValidXMLUser>\n  <Name>Joe Bloggs</Name>\n</ValidXMLUser>\n"))
 }
 
-func TestXMLShouldReturnErrorOnError(t *testing.T) {
-	g := NewGomegaWithT(t)
+func TestXMLShouldRPanicOnError(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
 	model := &XMLUser{Name: "Joe Bloggs"}
 
 	p := processor.IndentedXML("  ")
 
-	err := p.Process(recorder, "", model)
+	defer func() {
+		recover()
+	}()
 
-	g.Expect(err).To(HaveOccurred())
+	p.Process(recorder, "", model)
+
+	t.Error("should not reach here")
 }
 
 type ValidXMLUser struct {

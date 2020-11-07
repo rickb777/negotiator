@@ -67,8 +67,7 @@ func TestCSVShouldSetResponseBody(t *testing.T) {
 
 	for _, m := range models {
 		recorder := httptest.NewRecorder()
-		err := p.Process(recorder, "", m.stuff)
-		g.Expect(err).NotTo(HaveOccurred())
+		p.Process(recorder, "", m.stuff)
 		g.Expect(recorder.Body.String()).To(Equal(m.expected))
 	}
 }
@@ -96,21 +95,23 @@ func TestCSVShouldSetResponseBodyWithTabs(t *testing.T) {
 
 	for _, m := range models {
 		recorder := httptest.NewRecorder()
-		err := p.Process(recorder, "", m.stuff)
-		g.Expect(err).NotTo(HaveOccurred())
+		p.Process(recorder, "", m.stuff)
 		g.Expect(recorder.Body.String()).To(Equal(m.expected))
 	}
 }
 
-func TestCSVShouldReturnErrorOnError(t *testing.T) {
-	g := NewGomegaWithT(t)
+func TestCSVShouldPanicOnError(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
 	p := processor.CSV()
 
-	err := p.Process(recorder, "", make(chan int, 0))
+	defer func() {
+		recover()
+	}()
 
-	g.Expect(err).To(HaveOccurred())
+	p.Process(recorder, "", make(chan int, 0))
+
+	t.Error("should not reach here")
 }
 
 type Data struct {

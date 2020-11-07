@@ -39,7 +39,11 @@ func (*txtProcessor) CanProcess(mediaRange string, lang string) bool {
 	return strings.EqualFold(mediaRange, "text/plain") || strings.EqualFold(mediaRange, "text/*")
 }
 
-func (p *txtProcessor) Process(w http.ResponseWriter, _ string, dataModel interface{}) error {
+func (p *txtProcessor) Process(w http.ResponseWriter, _ string, dataModel interface{}) {
+	must(p.doProcess(w, "", dataModel))
+}
+
+func (p *txtProcessor) doProcess(w http.ResponseWriter, _ string, dataModel interface{}) error {
 	s, ok := dataModel.(string)
 	if ok {
 		return WriteWithNewline(w, []byte(s))

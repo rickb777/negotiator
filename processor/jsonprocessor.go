@@ -38,25 +38,22 @@ func (*jsonProcessor) CanProcess(mediaRange string, lang string) bool {
 		strings.HasSuffix(mediaRange, "+json")
 }
 
-func (p *jsonProcessor) Process(w http.ResponseWriter, template string, dataModel interface{}) error {
-	return RenderJSON(p.indent)(w, template, dataModel)
+func (p *jsonProcessor) Process(w http.ResponseWriter, template string, dataModel interface{}) {
+	RenderJSON(p.indent)(w, template, dataModel)
 }
 
 // RenderJSON returns a rendering function that converts some data into JSON.
-func RenderJSON(indent string) func(http.ResponseWriter, string, interface{}) error {
+func RenderJSON(indent string) func(http.ResponseWriter, string, interface{}) {
 	if indent == "" {
-		return func(w http.ResponseWriter, _ string, dataModel interface{}) error {
-			return json.NewEncoder(w).Encode(dataModel)
+		return func(w http.ResponseWriter, _ string, dataModel interface{}) {
+			must(json.NewEncoder(w).Encode(dataModel))
 		}
 	}
 
-	return func(w http.ResponseWriter, _ string, dataModel interface{}) error {
+	return func(w http.ResponseWriter, _ string, dataModel interface{}) {
 		js, err := json.MarshalIndent(dataModel, "", indent)
+		must(err)
 
-		if err != nil {
-			return err
-		}
-
-		return WriteWithNewline(w, js)
+		must(WriteWithNewline(w, js))
 	}
 }

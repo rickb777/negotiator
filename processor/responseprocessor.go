@@ -12,11 +12,18 @@ type ResponseProcessor interface {
 	// ContentType returns the content type for this response.
 	ContentType() string
 	// Process renders the data model to the response writer, without setting any headers.
-	Process(w http.ResponseWriter, template string, dataModel interface{}) error
+	// If the processor encounters an error, it should panic.
+	Process(w http.ResponseWriter, template string, dataModel interface{})
 }
 
 // ContentTypeSettable interface provides for those response processors that allow the
 // response Content-Type to be set explicitly.
 type ContentTypeSettable interface {
 	WithContentType(contentType string) ResponseProcessor
+}
+
+func must(err error) {
+	if err != nil {
+		panic(err)
+	}
 }

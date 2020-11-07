@@ -26,7 +26,7 @@ type renderer struct {
 	language    string
 	template    string
 	contentType string
-	process     func(w http.ResponseWriter, template string, dataModel interface{}) error
+	process     func(w http.ResponseWriter, template string, dataModel interface{})
 }
 
 func (r renderer) StatusCode() int {
@@ -41,7 +41,8 @@ func (r *renderer) WriteContentType(w http.ResponseWriter) {
 }
 
 func (r *renderer) Render(w http.ResponseWriter) error {
-	return r.process(w, r.template, r.data)
+	r.process(w, r.template, r.data)
+	return nil
 }
 
 //-------------------------------------------------------------------------------------------------
