@@ -77,14 +77,14 @@ func (n *Negotiator) N() int {
 //-------------------------------------------------------------------------------------------------
 
 // Negotiate negotiates your model based on the HTTP Accept and Accept-... headers.
-// Any error arising will result in a 500 error response and a log message.
+// Any error arising will result in a panic.
 func (n *Negotiator) Negotiate(w http.ResponseWriter, req *http.Request, offers ...Offer) {
 	r := n.Render(req, offers...)
 	w.WriteHeader(r.StatusCode())
 	r.WriteContentType(w)
 	err := r.Render(w)
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("%s %s %w", req.Method, req.URL, err))
 	}
 }
 
