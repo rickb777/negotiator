@@ -14,6 +14,8 @@ type Render interface {
 	WriteContentType(w http.ResponseWriter)
 }
 
+// CodedRender extends Render with a status code. This provides compatibility with the
+// Gin Context.Render method.
 type CodedRender interface {
 	Render
 	StatusCode() int
