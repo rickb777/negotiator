@@ -11,20 +11,18 @@ const (
 	XMLHttpRequest = "XMLHttpRequest"
 )
 
-// BasicDataProvider is a function signature for obtaining data on request.
-// The Data field in an Offer may be one of these functions.
-// Note that its result can optionally be another BasicDataProvider or LanguageDataProvider.
-type BasicDataProvider func() interface{}
-
-// LanguageDataProvider is a function signature for obtaining data in a given language.
-// The Data field in an Offer may be one of these functions.
-// Note that its result can optionally be another BasicDataProvider or LanguageDataProvider.
-type LanguageDataProvider func(language string) interface{}
-
 // Offer holds the set of parameters that are offered to the content negotiation.
-// Note that Data will be passed to a ResponseProcessor, having first checked whether
-// it is a LanguageDataProvider, and if so that function will have been called with the
-// chosen language as its parameter.
+// Note that Data will be passed to a ResponseProcessor, having first checked
+//
+// * if it is a func(language string) interface{}, that function will have been called
+// with the chosen language as its parameter.
+//
+// * if it is a func() interface{}, that function will have been called
+//
+// The above checks are repeated until the data is neither kind of function.
+//
+// If the (resulting) data is nil, the response will have 204-Not Content status
+// instead of 200-OK.
 type Offer struct {
 	MediaType string // e.g. "text/html" or blank not relevant
 	Language  string // blank if not relevant
@@ -71,12 +69,11 @@ func (offers Offers) doSetDefaultWildcards() Offers {
 
 func dereferenceDataProviders(data interface{}, lang string) interface{} {
 	for {
-		switch fn := data.(type) {
-		case BasicDataProvider:
+		if fn, ok := data.(func() interface{}); ok {
 			data = fn()
-		case LanguageDataProvider:
+		} else if fn, ok := data.(func(string) interface{}); ok {
 			data = fn(lang)
-		default:
+		} else {
 			return data
 		}
 	}

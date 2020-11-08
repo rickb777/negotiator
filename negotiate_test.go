@@ -95,6 +95,27 @@ func Test_should_add_custom_response_processors_to_end(t *testing.T) {
 
 //-------------------------------------------------------------------------------------------------
 
+func Test_should_unpack_lazy_data(t *testing.T) {
+	g := gomega.NewWithT(t)
+	testLogger(t)
+	var a = &fakeProcessor{match: "text/html"}
+	n := negotiator.New(a)
+
+	req, _ := http.NewRequest("GET", "/", nil)
+	recorder := httptest.NewRecorder()
+
+	fn2 := func(lang string) interface{} {
+		return lang
+	}
+	fn1 := func() interface{} {
+		return fn2
+	}
+	n.Negotiate(recorder, req, negotiator.Offer{Data: fn1, Language: "en"})
+
+	g.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
+	g.Expect(recorder.Body.String()).To(gomega.Equal("text/html | en"))
+}
+
 func Test_should_use_default_processor_if_no_accept_header(t *testing.T) {
 	g := gomega.NewWithT(t)
 	testLogger(t)
