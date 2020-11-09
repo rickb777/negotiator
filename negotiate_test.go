@@ -168,7 +168,7 @@ func Test_should_return_406_if_no_matching_accept_header(t *testing.T) {
 	var fakeResponseProcessor = &fakeProcessor{match: "text/test"}
 	n := negotiator.New(fakeResponseProcessor)
 
-	cases := []string{"*/*", "text/test"}
+	cases := []string{"application/xml", "text/test"}
 
 	for _, c := range cases {
 		req, _ := http.NewRequest("GET", "/", nil)
@@ -199,7 +199,7 @@ func Test_should_return_406_when_media_range_is_explicitly_excluded(t *testing.T
 	g.Expect(recorder.Code).To(gomega.Equal(http.StatusNotAcceptable))
 }
 
-// RFC7231 recommends that, when no language matches are possible  a response should be sent anyway.
+// RFC7231 recommends that, when no language matches are possible, a response should be sent anyway.
 func Test_should_return_200_even_when_language_is_explicitly_excluded(t *testing.T) {
 	g := gomega.NewWithT(t)
 	testLogger(t)
@@ -220,18 +220,26 @@ func Test_should_return_200_even_when_language_is_explicitly_excluded(t *testing
 func Test_should_negotiate_and_write_to_response_body(t *testing.T) {
 	g := gomega.NewWithT(t)
 	testLogger(t)
-	var fakeResponseProcessor = &fakeProcessor{match: "text/test"}
-	n := negotiator.New(fakeResponseProcessor)
+	var p1 = &fakeProcessor{match: "text/html"}
+	var p2 = &fakeProcessor{match: "text/test"}
+	n := negotiator.New(p1, p2)
 
 	req, _ := http.NewRequest("GET", "/", nil)
-	req.Header.Add("Accept", "text/test")
-	req.Header.Add("Accept-Language", "en")
+	req.Header.Add("Accept", "text/test, text/*")
+	req.Header.Add("Accept-Language", "en-GB, fr-FR")
 	recorder := httptest.NewRecorder()
 
-	n.Negotiate(recorder, req, negotiator.Offer{Data: "foo", MediaType: "text/test"})
+	n.Negotiate(recorder, req,
+		// should be skipped because of media mismatch
+		negotiator.Offer{Data: "d1", MediaType: "text/html", Language: "en"},
+		// should be skipped because of language mismatch
+		negotiator.Offer{Data: "d2", MediaType: "text/test", Language: "de"},
+		// should match
+		negotiator.Offer{Data: "d3", MediaType: "text/test", Language: "en"},
+	)
 
 	g.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
-	g.Expect(recorder.Body.String()).To(gomega.Equal("text/test | foo"))
+	g.Expect(recorder.Body.String()).To(gomega.Equal("text/test | d3"))
 }
 
 func Test_should_match_subtype_wildcard(t *testing.T) {

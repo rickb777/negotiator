@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-const defaultCSVContentType = "text/csv"
+const defaultCSVContentType = "text/csv; charset=utf-8"
 
 type csvProcessor struct {
 	comma       rune

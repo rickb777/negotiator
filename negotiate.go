@@ -80,8 +80,8 @@ func (n *Negotiator) N() int {
 // Any error arising will result in a panic.
 func (n *Negotiator) Negotiate(w http.ResponseWriter, req *http.Request, offers ...Offer) {
 	r := n.Render(req, offers...)
-	w.WriteHeader(r.StatusCode())
 	r.WriteContentType(w)
+	w.WriteHeader(r.StatusCode())
 	err := r.Render(w)
 	if err != nil {
 		panic(fmt.Errorf("%s %s %w", req.Method, req.URL, err))
@@ -97,47 +97,58 @@ func (n *Negotiator) Render(req *http.Request, offers ...Offer) CodedRender {
 		return n.ajaxNegotiate(offers)
 	}
 
-	if len(n.processors) == 0 {
-		return unacceptable{n.errorHandler}
-	}
-
 	mrs := header.ParseMediaRanges(req.Header.Get(Accept)).WithDefault()
 	languages := header.Parse(req.Header.Get(AcceptLanguage)).WithDefault()
 
+	if len(n.processors) == 0 {
+		info2("406 no processors configured", "Accept", mrs.String(), "Accept-Language", languages.String())
+		return unacceptable{n.errorHandler}
+	}
+
 	// first pass - remove offers that match exclusions
 	// (this doesn't apply to language exclusions because we always allow at least one language match)
-	excluded := findExcludedOffers(offers, mrs)
+	remaining := removeExcludedOffers(offers, mrs)
 
-	// second pass - find the first matching media-range and language combination
-	for i, offer := range offers {
-		if !excluded[i] {
-			offeredType, offeredSubtype := split(offer.MediaType, '/')
+	// second pass - find the first exact-match media-range and language combination
+	for _, offer := range remaining {
+		p := n.findBestMatch(mrs, languages, offer, exactMatch)
+		if p != nil {
+			return process(p, offer)
+		}
+	}
 
-			for _, accepted := range mrs {
-				for _, lang := range languages {
-					info("200 compared", accepted.Value(), lang.Value, offer)
+	// third pass - find the first near-match media-range and language combination
+	for _, offer := range remaining {
+		p := n.findBestMatch(mrs, languages, offer, nearMatch)
+		if p != nil {
+			return process(p, offer)
+		}
+	}
 
-					if equalOrWildcard(accepted.Type, offeredType) &&
-						equalOrWildcard(accepted.Subtype, offeredSubtype) &&
-						equalOrWildcard(lang.Value, offer.Language) {
+	info2("406 rejected", "Accept", mrs.String(), "Accept-Language", languages.String())
+	return unacceptable{n.errorHandler}
+}
 
-						if accepted.Quality > 0 && lang.Quality > 0 {
-							for _, p := range n.processors {
-								if p.CanProcess(offer.MediaType, offer.Language) {
-									info("200 matched", accepted.Value(), lang.Value, offer)
-									return process(p, offer)
-								}
-							}
+func (n *Negotiator) findBestMatch(mrs header.MediaRanges, languages header.PrecedenceValues, offer Offer,
+	match func(header.MediaRange, header.PrecedenceValue, Offer) bool) processor.ResponseProcessor {
 
-							for _, p := range n.processors {
-								if accepted.Type == "*" && accepted.Subtype == "*" {
-									info("200 matched wildcard", accepted.Value(), lang.Value, offer)
-									return process(p, offer)
-								}
-							}
-						} else {
-							// content matched but is explicitly excluded, so stop checking other matches
-							return unacceptable{n.errorHandler}
+	for _, accepted := range mrs {
+		for _, lang := range languages {
+			info("compared", accepted.Value(), lang.Value, offer)
+
+			if match(accepted, lang, offer) {
+				if lang.Quality > 0 {
+					if offer.MediaType == "*/*" {
+						// default to the first processor
+						info("200 matched wildcard", accepted.Value(), lang.Value, offer)
+						return n.processors[0]
+					}
+
+					// find the first matching processor
+					for _, p := range n.processors {
+						if p.CanProcess(offer.MediaType, offer.Language) {
+							info("200 matched", accepted.Value(), lang.Value, offer)
+							return p
 						}
 					}
 				}
@@ -145,10 +156,11 @@ func (n *Negotiator) Render(req *http.Request, offers ...Offer) CodedRender {
 		}
 	}
 
-	return unacceptable{n.errorHandler}
+	return nil
 }
 
-func findExcludedOffers(offers []Offer, mrs header.MediaRanges) []bool {
+// Any media range
+func removeExcludedOffers(offers Offers, mrs header.MediaRanges) Offers {
 	excluded := make([]bool, len(offers))
 	for i, offer := range offers {
 		offeredType, offeredSubtype := split(offer.MediaType, '/')
@@ -162,8 +174,40 @@ func findExcludedOffers(offers []Offer, mrs header.MediaRanges) []bool {
 			}
 		}
 	}
-	return excluded
+
+	remaining := make(Offers, 0, len(offers))
+	for i, offer := range offers {
+		if !excluded[i] {
+			remaining = append(remaining, offer)
+		}
+	}
+
+	return remaining
 }
+
+func exactMatch(accepted header.MediaRange, lang header.PrecedenceValue, offer Offer) bool {
+	offeredType, offeredSubtype := split(offer.MediaType, '/')
+	return accepted.Type == offeredType &&
+		accepted.Subtype == offeredSubtype &&
+		equalOrPrefix(lang.Value, offer.Language)
+}
+
+func nearMatch(accepted header.MediaRange, lang header.PrecedenceValue, offer Offer) bool {
+	offeredType, offeredSubtype := split(offer.MediaType, '/')
+	return equalOrWildcard(accepted.Type, offeredType) &&
+		equalOrWildcard(accepted.Subtype, offeredSubtype) &&
+		equalOrPrefix(lang.Value, offer.Language)
+}
+
+func equalOrPrefix(acceptedLang, offeredLang string) bool {
+	return acceptedLang == "*" || acceptedLang == offeredLang || strings.HasPrefix(acceptedLang, offeredLang+"-")
+}
+
+func equalOrWildcard(accepted, offered string) bool {
+	return offered == "*" || accepted == "*" || accepted == offered
+}
+
+//-------------------------------------------------------------------------------------------------
 
 func process(p processor.ResponseProcessor, offer Offer) CodedRender {
 	data := dereferenceDataProviders(offer.Data, offer.Language)
@@ -181,13 +225,21 @@ func process(p processor.ResponseProcessor, offer Offer) CodedRender {
 }
 
 func info(msg, accepted, lang string, offer Offer) {
-	Printer('D', msg,
-		map[string]interface{}{
-			"Accepted":   accepted,
-			"Language":   lang,
-			"OfferMedia": offer.MediaType,
-			"OfferLang":  offer.Language,
-		})
+	info2(msg,
+		"Accepted", accepted,
+		"Language", lang,
+		"OfferMedia", offer.MediaType,
+		"OfferLang", offer.Language)
+}
+
+func info2(msg string, vv ...interface{}) {
+	m := make(map[string]interface{})
+	var s string
+	for i := 1; i < len(vv); i += 2 {
+		s = vv[i-1].(string)
+		m[s] = vv[i]
+	}
+	Printer('D', msg, m)
 }
 
 func (n *Negotiator) ajaxNegotiate(offers Offers) CodedRender {
@@ -209,10 +261,6 @@ func (n *Negotiator) ajaxNegotiate(offers Offers) CodedRender {
 // IsAjax tests whether a request has the Ajax header sent by browsers for XHR requests.
 func IsAjax(req *http.Request) bool {
 	return req.Header.Get(XRequestedWith) == XMLHttpRequest
-}
-
-func equalOrWildcard(accepted, offered string) bool {
-	return offered == "*" || accepted == "*" || accepted == offered
 }
 
 func split(value string, b byte) (string, string) {
