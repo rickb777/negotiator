@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const defaultXMLContentType = "application/xml"
+const defaultXMLContentType = "application/xml; charset=utf-8"
 
 type xmlProcessor struct {
 	indent      string
@@ -35,7 +35,11 @@ func (p *xmlProcessor) WithContentType(contentType string) ResponseProcessor {
 }
 
 func (*xmlProcessor) CanProcess(mediaRange string, lang string) bool {
-	return strings.Contains(mediaRange, "/xml") || strings.HasSuffix(mediaRange, "+xml")
+	// see https://tools.ietf.org/html/rfc7303 XML Media Types
+	return mediaRange == "application/xml" || mediaRange == "text/xml" ||
+		strings.HasSuffix(mediaRange, "+xml") ||
+		strings.HasPrefix(mediaRange, "application/xml-") ||
+		strings.HasPrefix(mediaRange, "text/xml-")
 }
 
 func (p *xmlProcessor) Process(w http.ResponseWriter, _ string, dataModel interface{}) {

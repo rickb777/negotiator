@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-const defaultJSONContentType = "application/json"
+const defaultJSONContentType = "application/json; charset=utf-8"
 
 type jsonProcessor struct {
 	indent      string

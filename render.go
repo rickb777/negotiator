@@ -37,7 +37,7 @@ func (r renderer) StatusCode() int {
 
 func (r *renderer) WriteContentType(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", r.contentType)
-	if r.language != "" {
+	if r.language != "" && r.language != "*" {
 		w.Header().Set("Content-Language", r.language)
 	}
 }

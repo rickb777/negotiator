@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const defaultTxtContentType = "text/plain"
+const defaultTxtContentType = "text/plain; charset=utf-8"
 
 type txtProcessor struct {
 	contentType string
