@@ -207,7 +207,9 @@ func equalOrPrefix(acceptedLang, offeredLang string) bool {
 }
 
 func equalOrWildcard(accepted, offered string) bool {
-	return offered == "*" || accepted == "*" || accepted == offered
+	return offered == "*" ||
+		accepted == "*" ||
+		accepted == offered
 }
 
 //-------------------------------------------------------------------------------------------------
