@@ -42,8 +42,8 @@ func (*xmlProcessor) CanProcess(mediaRange string, lang string) bool {
 		strings.HasPrefix(mediaRange, "text/xml-")
 }
 
-func (p *xmlProcessor) Process(w http.ResponseWriter, _ string, dataModel interface{}) {
-	must(p.doProcess(w, "", dataModel))
+func (p *xmlProcessor) Process(w http.ResponseWriter, _ string, dataModel interface{}) error {
+	return p.doProcess(w, "", dataModel)
 }
 
 func (p *xmlProcessor) doProcess(w http.ResponseWriter, _ string, dataModel interface{}) error {

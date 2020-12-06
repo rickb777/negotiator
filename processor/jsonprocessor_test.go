@@ -73,7 +73,8 @@ func TestJSONShouldWriteResponseBodyIndented(t *testing.T) {
 	g.Expect(recorder.Body.String()).To(Equal("{\n  \"Name\": \"Joe Bloggs\"\n}\n"))
 }
 
-func TestJSONShouldPanicOnError(t *testing.T) {
+func TestJSONShouldReturnError(t *testing.T) {
+	g := NewGomegaWithT(t)
 	recorder := httptest.NewRecorder()
 
 	model := &User{
@@ -82,13 +83,9 @@ func TestJSONShouldPanicOnError(t *testing.T) {
 
 	p := processor.JSON()
 
-	defer func() {
-		recover()
-	}()
+	err := p.Process(recorder, "", model)
 
-	p.Process(recorder, "", model)
-
-	t.Error("should not reach here")
+	g.Expect(err).To(HaveOccurred())
 }
 
 type User struct {

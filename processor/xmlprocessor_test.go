@@ -68,19 +68,16 @@ func TestXMlShouldSetResponseBodyWithIndentation(t *testing.T) {
 }
 
 func TestXMLShouldRPanicOnError(t *testing.T) {
+	g := NewGomegaWithT(t)
 	recorder := httptest.NewRecorder()
 
 	model := &XMLUser{Name: "Joe Bloggs"}
 
 	p := processor.IndentedXML("  ")
 
-	defer func() {
-		recover()
-	}()
+	err := p.Process(recorder, "", model)
 
-	p.Process(recorder, "", model)
-
-	t.Error("should not reach here")
+	g.Expect(err).To(HaveOccurred())
 }
 
 type ValidXMLUser struct {

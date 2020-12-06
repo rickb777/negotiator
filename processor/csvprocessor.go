@@ -52,10 +52,10 @@ func (*csvProcessor) CanProcess(mediaRange string, lang string) bool {
 	return strings.EqualFold(mediaRange, "text/csv") || strings.EqualFold(mediaRange, "text/*")
 }
 
-func (p *csvProcessor) Process(w http.ResponseWriter, _ string, dataModel interface{}) {
+func (p *csvProcessor) Process(w http.ResponseWriter, _ string, dataModel interface{}) error {
 	writer := csv.NewWriter(w)
 	writer.Comma = p.comma
-	must(p.flush(writer, p.process(writer, dataModel)))
+	return p.flush(writer, p.process(writer, dataModel))
 }
 
 var debug = func(msg string, args ...interface{}) {}

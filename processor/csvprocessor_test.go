@@ -100,18 +100,15 @@ func TestCSVShouldSetResponseBodyWithTabs(t *testing.T) {
 	}
 }
 
-func TestCSVShouldPanicOnError(t *testing.T) {
+func TestCSVShouldReturnError(t *testing.T) {
+	g := NewGomegaWithT(t)
 	recorder := httptest.NewRecorder()
 
 	p := processor.CSV()
 
-	defer func() {
-		recover()
-	}()
+	err := p.Process(recorder, "", make(chan int, 0))
 
-	p.Process(recorder, "", make(chan int, 0))
-
-	t.Error("should not reach here")
+	g.Expect(err).To(HaveOccurred())
 }
 
 type Data struct {

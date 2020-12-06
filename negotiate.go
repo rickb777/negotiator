@@ -78,14 +78,15 @@ func (n *Negotiator) N() int {
 
 // Negotiate negotiates your model based on the HTTP Accept and Accept-... headers.
 // Any error arising will result in a panic.
-func (n *Negotiator) Negotiate(w http.ResponseWriter, req *http.Request, offers ...Offer) {
+func (n *Negotiator) Negotiate(w http.ResponseWriter, req *http.Request, offers ...Offer) error {
 	r := n.Render(req, offers...)
 	r.WriteContentType(w)
 	w.WriteHeader(r.StatusCode())
 	err := r.Render(w)
 	if err != nil {
-		panic(fmt.Errorf("%s %s %w", req.Method, req.URL, err))
+		return fmt.Errorf("%s %s %w", req.Method, req.URL, err)
 	}
+	return nil
 }
 
 // Render computes the best matching response, if there is one, and returns a suitable renderer
